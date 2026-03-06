@@ -1,0 +1,74 @@
+{
+  "name": "relicware-catalog",
+  "private": true,
+  "type": "module",
+  "imports": {
+    "#/*": "./src/*"
+  },
+  "scripts": {
+    "dev": "bun vite dev --port 3000",
+    "build": "bun vite build",
+    "preview": "bun vite preview",
+    "test": "vitest run",
+    "format": "biome format",
+    "lint": "biome lint",
+    "check": "biome check",
+    "db:generate": "bun drizzle-kit generate",
+    "db:migrate": "bun drizzle-kit migrate",
+    "db:push": "bun drizzle-kit push",
+    "db:pull": "bun drizzle-kit pull",
+    "db:studio": "bun drizzle-kit studio"
+  },
+  "dependencies": {
+    "@orpc/client": "^1.13.6",
+    "@orpc/json-schema": "^1.13.6",
+    "@orpc/openapi": "^1.13.6",
+    "@orpc/server": "^1.13.6",
+    "@orpc/tanstack-query": "^1.13.6",
+    "@orpc/zod": "^1.13.6",
+    "@tailwindcss/vite": "^4.2.1",
+    "@tanstack/react-devtools": "latest",
+    "@tanstack/react-form": "latest",
+    "@tanstack/react-query": "latest",
+    "@tanstack/react-query-devtools": "latest",
+    "@tanstack/react-router": "latest",
+    "@tanstack/react-router-devtools": "latest",
+    "@tanstack/react-router-ssr-query": "latest",
+    "@tanstack/react-start": "latest",
+    "@tanstack/router-plugin": "^1.166.2",
+    "better-auth": "^1.5.4",
+    "drizzle-kit": "^0.31.9",
+    "drizzle-orm": "^0.45.1",
+    "lucide-react": "^0.545.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "tailwindcss": "^4.2.1",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.4.5",
+    "@tailwindcss/typography": "^0.5.19",
+    "@tanstack/devtools-vite": "latest",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/react": "^16.3.2",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^22.19.15",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.4",
+    "dotenv": "^17.3.1",
+    "jsdom": "^28.1.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.1",
+    "vite-tsconfig-paths": "^5.1.4",
+    "vitest": "^3.2.4"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "lightningcss",
+      "better-sqlite3"
+    ]
+  }
+}

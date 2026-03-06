@@ -1,0 +1,26 @@
+{
+  "projectName": "relicware-catalog",
+  "mode": "file-router",
+  "typescript": true,
+  "packageManager": "bun",
+  "includeExamples": false,
+  "tailwind": true,
+  "addOnOptions": {
+    "drizzle": {
+      "database": "sqlite"
+    }
+  },
+  "envVarValues": {},
+  "git": true,
+  "routerOnly": false,
+  "version": 1,
+  "framework": "react",
+  "chosenAddOns": [
+    "biome",
+    "form",
+    "oRPC",
+    "better-auth",
+    "tanstack-query",
+    "drizzle"
+  ]
+}
