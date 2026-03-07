@@ -14,11 +14,143 @@ import {
   Title,
 } from "@mantine/core";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ChevronRight, Coffee, QrCode, Smartphone, Store } from "lucide-react";
+import { Check, ChevronRight, Coffee, QrCode, Smartphone, Store } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   component: Index,
 });
+
+function HeroAnimation() {
+  return (
+    <Box pos="relative" w="100%" maw={360} h={380} mx="auto" style={{ zIndex: 1 }}>
+      <style>{`
+        @keyframes clickBtn {
+          0%, 15% { transform: scale(1); filter: brightness(1); }
+          18% { transform: scale(0.95); filter: brightness(0.9); }
+          22%, 100% { transform: scale(1); filter: brightness(1); }
+        }
+        @keyframes flyPayload {
+          0%, 20% { transform: translate(0, 0) scale(0.5); opacity: 0; }
+          22% { transform: translate(0, 0) scale(1); opacity: 1; }
+          45% { transform: translate(160px, -150px) scale(1); opacity: 1; }
+          50%, 100% { transform: translate(160px, -150px) scale(0); opacity: 0; }
+        }
+        @keyframes popAlert {
+          0%, 45% { transform: translateY(15px) scale(0.9); opacity: 0; }
+          50% { transform: translateY(-5px) scale(1.02); opacity: 1; box-shadow: 0 10px 20px rgba(255, 100, 100, 0.1); }
+          55%, 85% { transform: translateY(0) scale(1); opacity: 1; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+          90%, 100% { transform: translateY(-15px) scale(0.9); opacity: 0; }
+        }
+        @keyframes pathDash {
+          to { stroke-dashoffset: -12; }
+        }
+      `}</style>
+      
+      {/* Background SVG path to show connection */}
+      <svg width="100%" height="100%" style={{ position: "absolute", top: 0, left: 0, zIndex: 0 }} aria-hidden="true">
+        <path 
+          d="M 80 270 Q 140 200, 220 120" 
+          stroke="var(--mantine-color-brand-2)" 
+          strokeWidth="3" 
+          strokeDasharray="6 6" 
+          fill="none" 
+          style={{ animation: 'pathDash 1s linear infinite' }}
+        />
+      </svg>
+
+      {/* FLYING PAYLOAD */}
+      <Box 
+        pos="absolute" 
+        bottom={100} 
+        left={60} 
+        style={{ animation: 'flyPayload 4s ease-in-out infinite', zIndex: 3 }}
+      >
+        <ThemeIcon size="md" radius="xl" color="brand">
+          <Check size={14} />
+        </ThemeIcon>
+      </Box>
+
+      {/* PHONE (Customer side) */}
+      <Paper shadow="xl" radius="xl" p="md" withBorder w={160} pos="absolute" bottom={0} left={0} bg="white" style={{ zIndex: 2 }}>
+        <Box bg="gray.1" h={90} style={{ borderRadius: 12, overflow: "hidden" }} mb="sm" pos="relative">
+           <ThemeIcon size="xl" radius="md" variant="subtle" color="gray" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
+             <Coffee size={24} />
+           </ThemeIcon>
+        </Box>
+        <Box bg="gray.2" h={10} w="70%" mb={6} style={{ borderRadius: 4 }} />
+        <Box bg="gray.1" h={8} w="50%" mb="xl" style={{ borderRadius: 4 }} />
+        
+        <Box 
+          bg="brand.5" 
+          h={36} 
+          style={{ borderRadius: 18, animation: 'clickBtn 4s ease-in-out infinite' }} 
+          display="flex"
+        >
+          <Text size="xs" fw={700} c="white" m="auto">Ordenar $3.50</Text>
+        </Box>
+      </Paper>
+
+      {/* DASHBOARD (Business side) */}
+      <Paper shadow="xl" radius="lg" p="md" withBorder w={220} pos="absolute" top={20} right={0} bg="white" style={{ zIndex: 2 }}>
+        <Group mb="md" wrap="nowrap">
+          <Avatar size="sm" color="brand" radius="md"><Store size={14}/></Avatar>
+          <Box style={{ flex: 1 }}>
+            <Text size="xs" fw={700}>Órdenes de Hoy</Text>
+            <Text size="xs" c="dimmed" style={{ fontSize: 10 }}>Actualizado ahora</Text>
+          </Box>
+        </Group>
+
+        <Stack gap="xs" pos="relative">
+          {/* Animated new order alert */}
+          <Paper 
+            shadow="sm" 
+            p="xs" 
+            radius="md" 
+            withBorder 
+            bg="brand.0"
+            style={{ 
+              position: 'absolute', 
+              top: 0, left: 0, right: 0, 
+              animation: 'popAlert 4s cubic-bezier(0.175, 0.885, 0.32, 1.275) infinite',
+              zIndex: 10 
+            }}
+          >
+            <Group wrap="nowrap">
+              <ThemeIcon color="brand" variant="filled" size="sm" radius="xl"><Check size={12} /></ThemeIcon>
+              <Box style={{ flex: 1 }}>
+                <Text size="xs" fw={700} c="brand.9">Nuevo Pedido</Text>
+                <Text size="xs" c="brand.7" style={{ fontSize: 10 }}>Mesa 4 • Café x1</Text>
+              </Box>
+              <Text size="xs" fw={800} c="brand.9">$3.5</Text>
+            </Group>
+          </Paper>
+
+          {/* Older orders (static) */}
+          <Box p="xs" bg="gray.0" style={{ borderRadius: 8, opacity: 0.6, transform: 'translateY(50px)' }}>
+            <Group wrap="nowrap">
+              <ThemeIcon color="gray" variant="light" size="sm" radius="md"><Coffee size={12} /></ThemeIcon>
+              <Box style={{ flex: 1 }}>
+                <Text size="xs" fw={600}>Para llevar</Text>
+                <Text size="xs" c="dimmed" style={{ fontSize: 10 }}>Hace 5 min</Text>
+              </Box>
+              <Text size="xs" fw={600} c="dimmed">$7.0</Text>
+            </Group>
+          </Box>
+          <Box p="xs" bg="gray.0" style={{ borderRadius: 8, opacity: 0.4, transform: 'translateY(50px)' }}>
+            <Group wrap="nowrap">
+              <ThemeIcon color="gray" variant="light" size="sm" radius="md"><Store size={12} /></ThemeIcon>
+              <Box style={{ flex: 1 }}>
+                <Text size="xs" fw={600}>En local</Text>
+                <Text size="xs" c="dimmed" style={{ fontSize: 10 }}>Hace 18 min</Text>
+              </Box>
+              <Text size="xs" fw={600} c="dimmed">$12.5</Text>
+            </Group>
+          </Box>
+        </Stack>
+      </Paper>
+    </Box>
+  );
+}
 
 function Index() {
   return (
@@ -82,26 +214,7 @@ function Index() {
                 style={{ borderRadius: "50%", filter: "blur(60px)", opacity: 0.6, zIndex: 0 }}
               />
               {/* Mockup */}
-              <Paper shadow="xl" radius={30} p="md" withBorder w={320} bg="white" style={{ overflow: "hidden", zIndex: 1, margin: "0 auto" }}>
-                <Box bg="gray.1" h={120} style={{ borderRadius: 16 }} mb="md" />
-                <Title order={4} ta="center" mb={4}>La Barra de Café</Title>
-                <Text size="xs" ta="center" c="dimmed" mb="lg">Especialidad en granos tostados</Text>
-                
-                <Stack gap="sm">
-                  {[1, 2, 3].map((i) => (
-                    <Group key={i} p="xs" bg="gray.0" wrap="nowrap" style={{ borderRadius: 12 }}>
-                      <ThemeIcon size={48} radius="md" variant="light" color="brand">
-                        <Coffee size={24} />
-                      </ThemeIcon>
-                      <Box style={{ flex: 1 }}>
-                        <Text size="sm" fw={600}>Café de la casa</Text>
-                        <Text size="xs" c="dimmed">Tostado medio</Text>
-                      </Box>
-                      <Text size="sm" fw={700}>$3.50</Text>
-                    </Group>
-                  ))}
-                </Stack>
-              </Paper>
+              <HeroAnimation />
             </Box>
           </Grid.Col>
         </Grid>
