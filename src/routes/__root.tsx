@@ -40,11 +40,11 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <ColorSchemeScript />
+        <ColorSchemeScript forceColorScheme="light" />
         <HeadContent />
       </head>
       <body>
-        <MantineProvider theme={theme}>
+        <MantineProvider theme={theme} forceColorScheme="light">
           <TanStackQueryProvider>
             {children}
             <TanStackDevtools
