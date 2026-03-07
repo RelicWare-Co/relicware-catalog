@@ -7,6 +7,7 @@ import {
   Button,
   Card,
   Group,
+  type MantineTheme,
   Menu,
   Modal,
   NavLink,
@@ -15,6 +16,7 @@ import {
   Stack,
   Text,
   ThemeIcon,
+  Title,
   UnstyledButton,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
@@ -30,6 +32,53 @@ import {
   Users,
 } from "lucide-react";
 import type React from "react";
+
+const navLinkStyles = (
+  theme: MantineTheme,
+  options?: { active?: boolean; disabled?: boolean },
+) => {
+  const isActive = options?.active ?? false;
+  const isDisabled = options?.disabled ?? false;
+
+  return {
+    root: {
+      borderRadius: theme.radius.md,
+      padding: `${theme.spacing.sm} ${theme.spacing.md}`,
+      fontWeight: 600,
+      color: isDisabled
+        ? "var(--mantine-color-gray-6)"
+        : isActive
+          ? "var(--mantine-color-brand-7)"
+          : "var(--mantine-color-dark-6)",
+      backgroundColor: isActive
+        ? "var(--mantine-color-brand-0)"
+        : "transparent",
+      transition: "background-color 150ms ease, color 150ms ease",
+      cursor: isDisabled ? "default" : "pointer",
+      "&:hover": {
+        backgroundColor: isDisabled
+          ? "transparent"
+          : isActive
+            ? "var(--mantine-color-brand-0)"
+            : "var(--mantine-color-warm-2)",
+      },
+    },
+  };
+};
+
+const starterPlanFeatures = [
+  "Hasta 50 productos",
+  "1 Catálogo",
+  "Atención por WhatsApp",
+];
+
+const proPlanFeatures = [
+  "Productos ilimitados",
+  "Catálogos ilimitados",
+  "Recibe pedidos web",
+  "Dominio personalizado",
+  "Sin comisiones por venta",
+];
 
 export function DashboardLayout({ children }: { children?: React.ReactNode }) {
   const [opened, { toggle }] = useDisclosure();
@@ -54,7 +103,12 @@ export function DashboardLayout({ children }: { children?: React.ReactNode }) {
       path: "/dashboard/customers",
       comingSoon: true,
     },
-    { icon: Settings, label: "Configuración", path: "/dashboard/settings" },
+    {
+      icon: Settings,
+      label: "Configuración",
+      path: "/dashboard/settings",
+      comingSoon: true,
+    },
   ];
 
   return (
@@ -75,31 +129,37 @@ export function DashboardLayout({ children }: { children?: React.ReactNode }) {
         styles={{ header: { borderColor: "var(--mantine-color-warm-3)" } }}
       >
         <Group h="100%" px="xl" justify="space-between">
-          <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
+          <Burger
+            opened={opened}
+            onClick={toggle}
+            hiddenFrom="sm"
+            size="sm"
+            aria-label={opened ? "Cerrar navegación" : "Abrir navegación"}
+          />
 
           <Group justify="flex-end" style={{ flex: 1 }}>
-            <Menu shadow="md" width={220} position="bottom-end" radius="md">
+            <Menu shadow="sm" width={220} position="bottom-end" radius="md">
               <Menu.Target>
                 <UnstyledButton
                   p="xs"
                   style={{
                     borderRadius: "var(--mantine-radius-md)",
-                    transition: "background-color 0.2s ease",
+                    border: "1px solid var(--mantine-color-warm-3)",
+                    backgroundColor: "var(--mantine-color-white)",
                   }}
-                  className="hover:bg-warm-2"
                 >
                   <Group gap="sm">
-                    <Avatar radius="xl" color="brand.6">
+                    <Avatar radius="xl" color="brand" variant="light">
                       MA
                     </Avatar>
-                    <div style={{ display: "flex", flexDirection: "column" }}>
+                    <Stack gap={0} style={{ minWidth: 0 }}>
                       <Text size="sm" fw={600} c="dark.8">
                         María A.
                       </Text>
                       <Text size="xs" c="dimmed">
                         Restaurante "El Sazón"
                       </Text>
-                    </div>
+                    </Stack>
                   </Group>
                 </UnstyledButton>
               </Menu.Target>
@@ -136,7 +196,6 @@ export function DashboardLayout({ children }: { children?: React.ReactNode }) {
       >
         <AppShell.Section mb={40} mt="xs">
           <Group px="md">
-            {/* Un Branding sútil, que inspira la estética cálida/humana */}
             <Text
               c="brand.6"
               fw={800}
@@ -149,111 +208,76 @@ export function DashboardLayout({ children }: { children?: React.ReactNode }) {
         </AppShell.Section>
 
         <AppShell.Section grow>
-          {navItems.map((item) => {
-            const isActive =
-              location.pathname.startsWith(item.path) &&
-              (item.path !== "/dashboard" ||
-                location.pathname === "/dashboard");
+          <Stack gap={4}>
+            {navItems.map((item) => {
+              const isActive =
+                location.pathname.startsWith(item.path) &&
+                (item.path !== "/dashboard" ||
+                  location.pathname === "/dashboard");
 
-            return item.comingSoon ? (
-              <NavLink
-                key={item.path}
-                component="button"
-                label={
-                  <Group justify="space-between" wrap="nowrap">
-                    <Text span>{item.label}</Text>
-                    <Badge
-                      size="xs"
-                      variant="light"
-                      color="gray.6"
-                      radius="sm"
-                      fw={700}
-                    >
-                      Próximamente
-                    </Badge>
-                  </Group>
-                }
-                leftSection={<item.icon size={20} strokeWidth={1.5} />}
-                mb={4}
-                styles={(theme) => ({
-                  root: {
-                    borderRadius: theme.radius.md,
-                    fontWeight: 600,
-                    padding: "12px 16px",
-                    color: "var(--mantine-color-gray-6)",
-                    backgroundColor: "transparent",
-                    "&:hover": {
-                      backgroundColor: "transparent",
-                    },
-                    cursor: "default",
-                  },
-                })}
-              />
-            ) : (
-              <NavLink
-                key={item.path}
-                component={Link}
-                to={item.path}
-                label={
-                  <Group justify="space-between" wrap="nowrap">
-                    <Text span>{item.label}</Text>
-                  </Group>
-                }
-                leftSection={
-                  <item.icon size={20} strokeWidth={isActive ? 2 : 1.5} />
-                }
-                active={isActive}
-                mb={4}
-                styles={(theme) => ({
-                  root: {
-                    borderRadius: theme.radius.md,
-                    fontWeight: 600,
-                    padding: "12px 16px",
-                    color: isActive
-                      ? "var(--mantine-color-brand-7)"
-                      : "var(--mantine-color-dark-6)",
-                    backgroundColor: isActive
-                      ? "var(--mantine-color-brand-0)"
-                      : "transparent",
-                    "&:hover": {
-                      backgroundColor: isActive
-                        ? "var(--mantine-color-brand-0)"
-                        : "var(--mantine-color-warm-2)",
-                    },
-                    cursor: "pointer",
-                  },
-                })}
-              />
-            );
-          })}
+              return item.comingSoon ? (
+                <NavLink
+                  key={item.path}
+                  component="button"
+                  label={
+                    <Group justify="space-between" wrap="nowrap">
+                      <Text span>{item.label}</Text>
+                      <Badge
+                        size="xs"
+                        variant="light"
+                        color="gray.6"
+                        radius="sm"
+                        fw={700}
+                      >
+                        Próximamente
+                      </Badge>
+                    </Group>
+                  }
+                  leftSection={<item.icon size={20} strokeWidth={1.5} />}
+                  mb={4}
+                  styles={(theme) => navLinkStyles(theme, { disabled: true })}
+                />
+              ) : (
+                <NavLink
+                  key={item.path}
+                  component={Link}
+                  to={item.path}
+                  label={
+                    <Group justify="space-between" wrap="nowrap">
+                      <Text span>{item.label}</Text>
+                    </Group>
+                  }
+                  leftSection={
+                    <item.icon size={20} strokeWidth={isActive ? 2 : 1.5} />
+                  }
+                  active={isActive}
+                  mb={4}
+                  styles={(theme) => navLinkStyles(theme, { active: isActive })}
+                />
+              );
+            })}
+          </Stack>
         </AppShell.Section>
 
         <AppShell.Section>
-          <div
-            style={{
-              padding: "20px",
-              backgroundColor: "var(--mantine-color-brand-0)",
-              borderRadius: "var(--mantine-radius-md)",
-              textAlign: "center",
-            }}
-          >
+          <Card withBorder radius="lg" p="lg" bg="brand.0">
             <Text fz="sm" fw={700} c="brand.7" mb={4}>
               Plan Emprendedor
             </Text>
             <Text fz="xs" c="brand.6" mb={12}>
               15 / 50 Productos usados
             </Text>
-            <UnstyledButton onClick={openPlans}>
-              <Text
-                fz="xs"
-                c="brand.7"
-                fw={600}
-                style={{ cursor: "pointer", textDecoration: "underline" }}
-              >
-                Mejorar plan
-              </Text>
-            </UnstyledButton>
-          </div>
+            <Button
+              variant="subtle"
+              color="brand"
+              size="compact-sm"
+              px={0}
+              justify="center"
+              onClick={openPlans}
+            >
+              Mejorar plan
+            </Button>
+          </Card>
         </AppShell.Section>
       </AppShell.Navbar>
 
@@ -266,9 +290,9 @@ export function DashboardLayout({ children }: { children?: React.ReactNode }) {
           padding="xl"
           centered
           title={
-            <Text fw={800} fz="xl" style={{ letterSpacing: "-0.02em" }}>
+            <Title order={3} c="dark.8" style={{ letterSpacing: "-0.02em" }}>
               Desbloquea todo el potencial
-            </Text>
+            </Title>
           }
           overlayProps={{
             backgroundOpacity: 0.5,
@@ -285,8 +309,8 @@ export function DashboardLayout({ children }: { children?: React.ReactNode }) {
               withBorder
               radius="xl"
               p="xl"
+              shadow="xs"
               style={{
-                borderColor: "var(--mantine-color-gray-3)",
                 display: "flex",
                 flexDirection: "column",
               }}
@@ -296,7 +320,12 @@ export function DashboardLayout({ children }: { children?: React.ReactNode }) {
                   Emprendedor
                 </Text>
                 <Group align="flex-end" gap="xs">
-                  <Text fw={900} fz={32} style={{ letterSpacing: "-0.04em" }}>
+                  <Text
+                    fw={900}
+                    fz={32}
+                    c="dark.8"
+                    style={{ letterSpacing: "-0.04em" }}
+                  >
                     Gratis
                   </Text>
                 </Group>
@@ -306,11 +335,7 @@ export function DashboardLayout({ children }: { children?: React.ReactNode }) {
               </Box>
 
               <Stack gap="sm" style={{ flex: 1 }}>
-                {[
-                  "Hasta 50 productos",
-                  "1 Catálogo",
-                  "Atención por WhatsApp",
-                ].map((feature) => (
+                {starterPlanFeatures.map((feature) => (
                   <Group
                     key={feature}
                     gap="sm"
@@ -320,7 +345,7 @@ export function DashboardLayout({ children }: { children?: React.ReactNode }) {
                     <ThemeIcon
                       size="sm"
                       radius="xl"
-                      color="gray.4"
+                      color="gray"
                       variant="light"
                       mt={2}
                     >
@@ -333,14 +358,7 @@ export function DashboardLayout({ children }: { children?: React.ReactNode }) {
                 ))}
               </Stack>
 
-              <Button
-                mt="xl"
-                variant="light"
-                color="gray"
-                radius="xl"
-                fullWidth
-                disabled
-              >
+              <Button mt="xl" variant="light" color="gray" fullWidth disabled>
                 Plan actual
               </Button>
             </Card>
@@ -350,17 +368,16 @@ export function DashboardLayout({ children }: { children?: React.ReactNode }) {
               withBorder
               radius="xl"
               p="xl"
+              bg="brand.0"
+              shadow="sm"
               style={{
-                borderColor: "var(--mantine-color-brand-3)",
-                backgroundColor: "var(--mantine-color-brand-0)",
-                boxShadow: "0 8px 30px rgba(var(--mantine-color-brand-2), 0.5)",
                 display: "flex",
                 flexDirection: "column",
                 position: "relative",
               }}
             >
               <Badge
-                color="brand.6"
+                color="brand"
                 variant="filled"
                 radius="sm"
                 style={{
@@ -378,7 +395,12 @@ export function DashboardLayout({ children }: { children?: React.ReactNode }) {
                   Profesional
                 </Text>
                 <Group align="flex-end" gap="xs">
-                  <Text fw={900} fz={32} style={{ letterSpacing: "-0.04em" }}>
+                  <Text
+                    fw={900}
+                    fz={32}
+                    c="dark.8"
+                    style={{ letterSpacing: "-0.04em" }}
+                  >
                     $39.900
                   </Text>
                   <Text c="dimmed" fz="sm" mb={6}>
@@ -391,20 +413,14 @@ export function DashboardLayout({ children }: { children?: React.ReactNode }) {
               </Box>
 
               <Stack gap="sm" style={{ flex: 1 }}>
-                {[
-                  "Productos ilimitados",
-                  "Catálogos ilimitados",
-                  "Recibe pedidos web",
-                  "Dominio personalizado",
-                  "Sin comisiones por venta",
-                ].map((feature) => (
+                {proPlanFeatures.map((feature) => (
                   <Group
                     key={feature}
                     gap="sm"
                     wrap="nowrap"
                     align="flex-start"
                   >
-                    <ThemeIcon size="sm" radius="xl" color="brand.6" mt={2}>
+                    <ThemeIcon size="sm" radius="xl" color="brand" mt={2}>
                       <Check size={12} strokeWidth={3} />
                     </ThemeIcon>
                     <Text fz="sm" c="dark.8" fw={500}>
@@ -414,18 +430,7 @@ export function DashboardLayout({ children }: { children?: React.ReactNode }) {
                 ))}
               </Stack>
 
-              <Button
-                mt="xl"
-                variant="filled"
-                color="brand.6"
-                radius="xl"
-                fullWidth
-                style={{
-                  fontWeight: 800,
-                  boxShadow:
-                    "0 4px 14px rgba(var(--mantine-color-brand-6), 0.4)",
-                }}
-              >
+              <Button mt="xl" variant="filled" color="brand" fullWidth fw={800}>
                 Actualizar a Pro
               </Button>
             </Card>
