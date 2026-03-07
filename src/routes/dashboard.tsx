@@ -14,6 +14,19 @@ export const Route = createFileRoute("/dashboard")({
       });
     }
 
+    const organizationRoute = "/dashboard/organizations";
+    const hasActiveOrganization = Boolean(session.session.activeOrganizationId);
+    const isOrganizationRoute = location.pathname.startsWith(organizationRoute);
+
+    if (!hasActiveOrganization && !isOrganizationRoute) {
+      throw redirect({
+        to: organizationRoute,
+        search: {
+          redirect: location.href,
+        },
+      });
+    }
+
     return { session };
   },
   component: DashboardRoute,

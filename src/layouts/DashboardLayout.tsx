@@ -23,7 +23,9 @@ import { useDisclosure } from "@mantine/hooks";
 import { Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import {
   BookOpen,
+  Building2,
   Check,
+  ChevronsUpDown,
   LayoutDashboard,
   LogOut,
   Receipt,
@@ -90,8 +92,19 @@ export function DashboardLayout({ children }: { children?: React.ReactNode }) {
   const location = useLocation();
   const pathname = location.pathname;
   const navigate = useNavigate({ from: "/dashboard" });
-  const { data: session } = authClient.useSession();
+  const { data: session, refetch: refetchSession } = authClient.useSession();
+  const { data: organizations, refetch: refetchOrganizations } =
+    authClient.useListOrganizations();
+  const {
+    data: activeOrganization,
+    refetch: refetchActiveOrganization,
+  } = authClient.useActiveOrganization();
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const [switchingOrganizationId, setSwitchingOrganizationId] =
+    useState<string | null>(null);
+  const [organizationError, setOrganizationError] = useState<string | null>(
+    null,
+  );
 
   const displayName = session?.user.name || "Tu cuenta";
   const displayEmail = session?.user.email || "";
@@ -117,10 +130,42 @@ export function DashboardLayout({ children }: { children?: React.ReactNode }) {
     });
   };
 
+  const handleOrganizationChange = async (organizationId: string) => {
+    if (organizationId === activeOrganization?.id) {
+      return;
+    }
+
+    setOrganizationError(null);
+    setSwitchingOrganizationId(organizationId);
+
+    const { error } = await authClient.organization.setActive({
+      organizationId,
+    });
+
+    if (error) {
+      setOrganizationError(error.message || "No se pudo cambiar la organización");
+      setSwitchingOrganizationId(null);
+      return;
+    }
+
+    await Promise.all([
+      refetchOrganizations(),
+      refetchActiveOrganization(),
+      refetchSession(),
+    ]);
+
+    setSwitchingOrganizationId(null);
+  };
+
   const navItems = [
     { icon: LayoutDashboard, label: "Inicio", path: "/dashboard" },
     { icon: BookOpen, label: "Catálogos", path: "/dashboard/catalogs" },
     { icon: ShoppingBag, label: "Productos", path: "/dashboard/products" },
+    {
+      icon: Building2,
+      label: "Organizaciones",
+      path: "/dashboard/organizations",
+    },
     {
       icon: Receipt,
       label: "Pedidos",
@@ -180,6 +225,85 @@ export function DashboardLayout({ children }: { children?: React.ReactNode }) {
           />
 
           <Group justify="flex-end" style={{ flex: 1 }}>
+            <Menu shadow="sm" width={280} position="bottom-end" radius="md">
+              <Menu.Target>
+                <UnstyledButton
+                  p="xs"
+                  style={{
+                    borderRadius: "var(--mantine-radius-md)",
+                    backgroundColor: "var(--mantine-color-white)",
+                    border: "1px solid var(--mantine-color-warm-3)",
+                  }}
+                >
+                  <Group gap="sm" wrap="nowrap">
+                    <ThemeIcon color="brand" variant="light" radius="xl">
+                      <Building2 size={16} />
+                    </ThemeIcon>
+                    <Stack gap={0} style={{ minWidth: 0 }}>
+                      <Text size="sm" fw={700} c="dark.8" truncate>
+                        {activeOrganization?.name || "Selecciona organización"}
+                      </Text>
+                      <Text size="xs" c="dimmed" truncate>
+                        {activeOrganization?.slug || "Administra equipos y espacios"}
+                      </Text>
+                    </Stack>
+                    <ChevronsUpDown size={16} color="var(--mantine-color-gray-6)" />
+                  </Group>
+                </UnstyledButton>
+              </Menu.Target>
+
+              <Menu.Dropdown>
+                <Menu.Label>Organización activa</Menu.Label>
+                {organizations?.length ? (
+                  organizations.map((organization) => {
+                    const isActive = organization.id === activeOrganization?.id;
+                    const isLoading = switchingOrganizationId === organization.id;
+
+                    return (
+                      <Menu.Item
+                        key={organization.id}
+                        onClick={() => handleOrganizationChange(organization.id)}
+                        disabled={isLoading || isActive}
+                        leftSection={<Building2 style={{ width: rem(16), height: rem(16) }} />}
+                        rightSection={
+                          isActive ? (
+                            <Badge size="xs" color="brand" variant="light">
+                              Activa
+                            </Badge>
+                          ) : isLoading ? (
+                            <Text size="xs" c="dimmed">
+                              Cambiando...
+                            </Text>
+                          ) : null
+                        }
+                      >
+                        <Stack gap={0}>
+                          <Text size="sm" fw={600}>
+                            {organization.name}
+                          </Text>
+                          <Text size="xs" c="dimmed">
+                            {organization.slug}
+                          </Text>
+                        </Stack>
+                      </Menu.Item>
+                    );
+                  })
+                ) : (
+                  <Menu.Item disabled>No tienes organizaciones todavía</Menu.Item>
+                )}
+                <Menu.Divider />
+                <Menu.Item
+                  component={Link}
+                  to="/dashboard/organizations"
+                  leftSection={
+                    <Settings style={{ width: rem(16), height: rem(16) }} />
+                  }
+                >
+                  Administrar organizaciones
+                </Menu.Item>
+              </Menu.Dropdown>
+            </Menu>
+
             <Menu shadow="sm" width={220} position="bottom-end" radius="md">
               <Menu.Target>
                 <UnstyledButton
@@ -229,6 +353,11 @@ export function DashboardLayout({ children }: { children?: React.ReactNode }) {
             </Menu>
           </Group>
         </Group>
+        {organizationError ? (
+          <Text size="xs" c="red.6" px="xl" pb="sm">
+            {organizationError}
+          </Text>
+        ) : null}
       </AppShell.Header>
 
       <AppShell.Navbar

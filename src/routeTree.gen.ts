@@ -16,6 +16,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
 import { Route as DashboardSettingsRouteImport } from './routes/dashboard/settings'
 import { Route as DashboardProductsRouteImport } from './routes/dashboard/products'
+import { Route as DashboardOrganizationsRouteImport } from './routes/dashboard/organizations'
 import { Route as DashboardCatalogsRouteImport } from './routes/dashboard/catalogs'
 import { Route as ApiSplatRouteImport } from './routes/api.$'
 import { Route as ApiRpcSplatRouteImport } from './routes/api.rpc.$'
@@ -56,6 +57,11 @@ const DashboardProductsRoute = DashboardProductsRouteImport.update({
   path: '/products',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardOrganizationsRoute = DashboardOrganizationsRouteImport.update({
+  id: '/organizations',
+  path: '/organizations',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const DashboardCatalogsRoute = DashboardCatalogsRouteImport.update({
   id: '/catalogs',
   path: '/catalogs',
@@ -84,6 +90,7 @@ export interface FileRoutesByFullPath {
   '/register': typeof RegisterRoute
   '/api/$': typeof ApiSplatRoute
   '/dashboard/catalogs': typeof DashboardCatalogsRoute
+  '/dashboard/organizations': typeof DashboardOrganizationsRoute
   '/dashboard/products': typeof DashboardProductsRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
   '/dashboard/': typeof DashboardIndexRoute
@@ -96,6 +103,7 @@ export interface FileRoutesByTo {
   '/register': typeof RegisterRoute
   '/api/$': typeof ApiSplatRoute
   '/dashboard/catalogs': typeof DashboardCatalogsRoute
+  '/dashboard/organizations': typeof DashboardOrganizationsRoute
   '/dashboard/products': typeof DashboardProductsRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
   '/dashboard': typeof DashboardIndexRoute
@@ -110,6 +118,7 @@ export interface FileRoutesById {
   '/register': typeof RegisterRoute
   '/api/$': typeof ApiSplatRoute
   '/dashboard/catalogs': typeof DashboardCatalogsRoute
+  '/dashboard/organizations': typeof DashboardOrganizationsRoute
   '/dashboard/products': typeof DashboardProductsRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
   '/dashboard/': typeof DashboardIndexRoute
@@ -125,6 +134,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/api/$'
     | '/dashboard/catalogs'
+    | '/dashboard/organizations'
     | '/dashboard/products'
     | '/dashboard/settings'
     | '/dashboard/'
@@ -137,6 +147,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/api/$'
     | '/dashboard/catalogs'
+    | '/dashboard/organizations'
     | '/dashboard/products'
     | '/dashboard/settings'
     | '/dashboard'
@@ -150,6 +161,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/api/$'
     | '/dashboard/catalogs'
+    | '/dashboard/organizations'
     | '/dashboard/products'
     | '/dashboard/settings'
     | '/dashboard/'
@@ -218,6 +230,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardProductsRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/dashboard/organizations': {
+      id: '/dashboard/organizations'
+      path: '/organizations'
+      fullPath: '/dashboard/organizations'
+      preLoaderRoute: typeof DashboardOrganizationsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/dashboard/catalogs': {
       id: '/dashboard/catalogs'
       path: '/catalogs'
@@ -251,6 +270,7 @@ declare module '@tanstack/react-router' {
 
 interface DashboardRouteChildren {
   DashboardCatalogsRoute: typeof DashboardCatalogsRoute
+  DashboardOrganizationsRoute: typeof DashboardOrganizationsRoute
   DashboardProductsRoute: typeof DashboardProductsRoute
   DashboardSettingsRoute: typeof DashboardSettingsRoute
   DashboardIndexRoute: typeof DashboardIndexRoute
@@ -258,6 +278,7 @@ interface DashboardRouteChildren {
 
 const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardCatalogsRoute: DashboardCatalogsRoute,
+  DashboardOrganizationsRoute: DashboardOrganizationsRoute,
   DashboardProductsRoute: DashboardProductsRoute,
   DashboardSettingsRoute: DashboardSettingsRoute,
   DashboardIndexRoute: DashboardIndexRoute,

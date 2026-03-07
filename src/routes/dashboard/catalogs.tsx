@@ -1,332 +1,688 @@
 import {
-  ActionIcon,
+  Alert,
   Badge,
-  Box,
   Button,
-  Flex,
+  Card,
+  Divider,
   Group,
-  ScrollArea,
+  Modal,
+  Select,
+  SimpleGrid,
   Stack,
+  Switch,
   Text,
   TextInput,
   Title,
 } from "@mantine/core";
+import { useForm } from "@mantine/form";
+import { useDisclosure } from "@mantine/hooks";
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  useSuspenseQuery,
+} from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { GripVertical, Plus, Smartphone } from "lucide-react";
-import { useState } from "react";
+import { FolderPlus, Layers3, Plus, Tags } from "lucide-react";
+import { startTransition, useState } from "react";
+
+import { getErrorMessage } from "#/lib/get-error-message";
+import { orpc } from "#/orpc/client";
+
+const listInput = { limit: 50, offset: 0 } as const;
+const catalogListQueryOptions = () => orpc.catalog.list.queryOptions({ input: listInput });
+const siteListQueryOptions = () => orpc.site.list.queryOptions({ input: listInput });
+const themeListQueryOptions = () =>
+  orpc.site.listThemes.queryOptions({ input: listInput });
+const locationListQueryOptions = () =>
+  orpc.operations.listLocations.queryOptions({ input: listInput });
+const categoryListQueryOptions = (catalogId: string) =>
+  orpc.catalog.listCategories.queryOptions({ input: { id: catalogId } });
+
+const catalogStatusOptions = [
+  { value: "draft", label: "Borrador" },
+  { value: "active", label: "Activo" },
+  { value: "archived", label: "Archivado" },
+] as const;
+
+const priceDisplayModeOptions = [
+  { value: "exact", label: "Precio exacto" },
+  { value: "starting_at", label: "Desde" },
+  { value: "hidden", label: "Ocultar precios" },
+] as const;
 
 export const Route = createFileRoute("/dashboard/catalogs")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    catalogId: typeof search.catalogId === "string" ? search.catalogId : undefined,
+  }),
+  loaderDeps: ({ search }) => ({ catalogId: search.catalogId }),
+  loader: async ({ context, deps }) => {
+    const [catalogs] = await Promise.all([
+      context.queryClient.ensureQueryData(catalogListQueryOptions()),
+      context.queryClient.ensureQueryData(siteListQueryOptions()),
+      context.queryClient.ensureQueryData(themeListQueryOptions()),
+      context.queryClient.ensureQueryData(locationListQueryOptions()),
+    ]);
+
+    const selectedCatalogId = deps.catalogId ?? catalogs.items[0]?.id;
+
+    if (selectedCatalogId) {
+      await context.queryClient.ensureQueryData(
+        categoryListQueryOptions(selectedCatalogId),
+      );
+    }
+  },
   component: CatalogsPage,
 });
 
-function LivePreview() {
-  return (
-    <Box
-      w={320}
-      h={640}
-      bg="warm-1"
-      style={{
-        borderRadius: "3rem",
-        border: "8px solid #2C2E33",
-        overflow: "hidden",
-        boxShadow: "0 20px 40px rgba(0,0,0,0.1)",
-        position: "relative",
-      }}
-    >
-      {/* Notch indicator */}
-      <Box
-        w={100}
-        h={24}
-        bg="#2C2E33"
-        style={{
-          position: "absolute",
-          top: 0,
-          left: "50%",
-          transform: "translateX(-50%)",
-          borderBottomLeftRadius: 16,
-          borderBottomRightRadius: 16,
-          zIndex: 10,
-        }}
-      />
+type CatalogFormValues = {
+  name: string;
+  description: string;
+  currencyCode: string;
+  status: string;
+  priceDisplayMode: string;
+  siteId: string;
+  locationId: string;
+  brandThemeId: string;
+  isPublic: boolean;
+};
 
-      <ScrollArea
-        h="100%"
-        type="never"
-        p="lg"
-        style={{ backgroundColor: "#FAF8F5" }}
-      >
-        <Stack gap="xl" mt="xl" pt="xl" align="center">
-          <Box
-            w={96}
-            h={96}
-            style={{
-              borderRadius: "40%",
-              backgroundColor: "var(--mantine-color-brand-2)",
-              backgroundImage:
-                "url('https://images.unsplash.com/photo-1596683803131-01ec35b8ddc3?w=400&q=80')",
-              backgroundSize: "cover",
-              backgroundPosition: "center",
-              boxShadow: "0 12px 32px rgba(0,0,0,0.12)",
-            }}
-          />
-          <Stack gap={4} align="center">
-            <Title
-              order={3}
-              style={{
-                fontFamily: "var(--mantine-font-family-headings)",
-                fontWeight: 900,
-                letterSpacing: "-0.04em",
-                color: "var(--mantine-color-dark-8)",
-              }}
-            >
-              Panadería El Molino
-            </Title>
-            <Text c="var(--mantine-color-warm-6)" size="sm" fw={600}>
-              Recién horneado todos los días
-            </Text>
-          </Stack>
-
-          <Stack w="100%" gap="sm">
-            <Button
-              variant="filled"
-              color="brand.6"
-              radius="xl"
-              size="lg"
-              fullWidth
-              style={{
-                boxShadow: "0 8px 20px rgba(var(--mantine-color-brand-6), 0.3)",
-                fontWeight: 800,
-                border: "none",
-              }}
-            >
-              Hacer Pedido en WhatsApp
-            </Button>
-            <Button
-              variant="white"
-              color="dark"
-              radius="xl"
-              size="lg"
-              fullWidth
-              style={{
-                boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
-                fontWeight: 800,
-                color: "var(--mantine-color-dark-8)",
-              }}
-            >
-              Nuestra Ubicación
-            </Button>
-          </Stack>
-
-          <Box mt="md" w="100%">
-            <Text
-              size="xl"
-              fw={900}
-              mb="sm"
-              style={{
-                letterSpacing: "-0.03em",
-                color: "var(--mantine-color-dark-9)",
-              }}
-            >
-              🥐 Panadería Clásica
-            </Text>
-            <Box
-              p="md"
-              style={{
-                backgroundColor: "white",
-                borderRadius: "2rem",
-                boxShadow: "0 8px 30px rgba(220, 215, 210, 0.5)",
-                overflow: "hidden",
-                transform: "translateZ(0)",
-              }}
-            >
-              <Group wrap="nowrap" align="start">
-                <Box
-                  w={72}
-                  h={72}
-                  style={{
-                    borderRadius: "1.2rem",
-                    backgroundImage:
-                      "url('https://images.unsplash.com/photo-1598373182133-52452f7691ef?w=400&q=80')",
-                    backgroundSize: "cover",
-                    backgroundPosition: "center",
-                    flexShrink: 0,
-                  }}
-                />
-                <Stack gap={0} style={{ flex: 1 }}>
-                  <Text fw={800} size="md" style={{ letterSpacing: "-0.02em" }}>
-                    Pan de Bono Artesanal
-                  </Text>
-                  <Text
-                    c="var(--mantine-color-warm-6)"
-                    size="sm"
-                    style={{ lineHeight: 1.3, marginTop: 4 }}
-                  >
-                    Queso doble crema y almidón de yuca
-                  </Text>
-                  <Text
-                    fw={900}
-                    mt={6}
-                    style={{ color: "var(--mantine-color-brand-7)" }}
-                  >
-                    $ 2.500
-                  </Text>
-                </Stack>
-              </Group>
-            </Box>
-          </Box>
-        </Stack>
-      </ScrollArea>
-    </Box>
-  );
-}
+type CategoryFormValues = {
+  name: string;
+  description: string;
+  parentCategoryId: string;
+  isVisible: boolean;
+};
 
 function CatalogsPage() {
-  const [categories, _setCategories] = useState([
-    { id: "1", name: "Panadería Clásica", items: 3 },
-    { id: "2", name: "Postres y Tortas", items: 5 },
-    { id: "3", name: "Bebidas Calientes", items: 2 },
-  ]);
+  const search = Route.useSearch();
+  const navigate = Route.useNavigate();
+  const queryClient = useQueryClient();
+  const { data: catalogData } = useSuspenseQuery(catalogListQueryOptions());
+  const { data: siteData } = useSuspenseQuery(siteListQueryOptions());
+  const { data: themeData } = useSuspenseQuery(themeListQueryOptions());
+  const { data: locationData } = useSuspenseQuery(locationListQueryOptions());
+  const catalogs = catalogData.items;
+  const selectedCatalogId = search.catalogId ?? catalogs[0]?.id ?? null;
+  const selectedCatalog =
+    catalogs.find((catalog) => catalog.id === selectedCatalogId) ?? null;
+  const categoriesQuery = useQuery({
+    ...categoryListQueryOptions(selectedCatalogId ?? ""),
+    enabled: Boolean(selectedCatalogId),
+  });
+  const categories = categoriesQuery.data ?? [];
+  const [catalogModalOpened, catalogModal] = useDisclosure(false);
+  const [categoryModalOpened, categoryModal] = useDisclosure(false);
+  const [catalogError, setCatalogError] = useState<string | null>(null);
+  const [categoryError, setCategoryError] = useState<string | null>(null);
+  const [editingCatalogId, setEditingCatalogId] = useState<string | null>(null);
+
+  const catalogForm = useForm<CatalogFormValues>({
+    mode: "controlled",
+    initialValues: {
+      name: "",
+      description: "",
+      currencyCode: "MXN",
+      status: "draft",
+      priceDisplayMode: "exact",
+      siteId: "",
+      locationId: "",
+      brandThemeId: "",
+      isPublic: true,
+    },
+    validate: {
+      name: (value) =>
+        value.trim().length >= 2 ? null : "Ingresa un nombre valido",
+      currencyCode: (value) =>
+        value.trim().length === 3 ? null : "Usa un codigo de moneda de 3 letras",
+    },
+  });
+
+  const categoryForm = useForm<CategoryFormValues>({
+    mode: "controlled",
+    initialValues: {
+      name: "",
+      description: "",
+      parentCategoryId: "",
+      isVisible: true,
+    },
+    validate: {
+      name: (value) =>
+        value.trim().length >= 2 ? null : "Ingresa un nombre de categoria",
+    },
+  });
+
+  const invalidateCatalogs = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: orpc.catalog.key() }),
+      queryClient.invalidateQueries({ queryKey: orpc.organization.key() }),
+    ]);
+  };
+
+  const catalogMutation = useMutation(
+    orpc.catalog.create.mutationOptions({
+      onSuccess: async (created) => {
+        await invalidateCatalogs();
+        setCatalogError(null);
+        setEditingCatalogId(null);
+        catalogModal.close();
+        startTransition(() => {
+          navigate({
+            search: (previous) => ({ ...previous, catalogId: created.id }),
+          });
+        });
+      },
+      onError: (error) => {
+        setCatalogError(getErrorMessage(error, "No se pudo crear el catalogo"));
+      },
+    }),
+  );
+
+  const updateCatalogMutation = useMutation(
+    orpc.catalog.update.mutationOptions({
+      onSuccess: async () => {
+        await invalidateCatalogs();
+        setCatalogError(null);
+        setEditingCatalogId(null);
+        catalogModal.close();
+      },
+      onError: (error) => {
+        setCatalogError(
+          getErrorMessage(error, "No se pudo actualizar el catalogo"),
+        );
+      },
+    }),
+  );
+
+  const createCategoryMutation = useMutation(
+    orpc.catalog.createCategory.mutationOptions({
+      onSuccess: async () => {
+        if (selectedCatalogId) {
+          await queryClient.invalidateQueries({
+            queryKey: orpc.catalog.listCategories.queryKey({
+              input: { id: selectedCatalogId },
+            }),
+          });
+        }
+        setCategoryError(null);
+        categoryModal.close();
+      },
+      onError: (error) => {
+        setCategoryError(
+          getErrorMessage(error, "No se pudo crear la categoria"),
+        );
+      },
+    }),
+  );
+
+  const openCreateCatalog = () => {
+    setCatalogError(null);
+    setEditingCatalogId(null);
+    catalogForm.setValues({
+      name: "",
+      description: "",
+      currencyCode: "MXN",
+      status: "draft",
+      priceDisplayMode: "exact",
+      siteId: "",
+      locationId: "",
+      brandThemeId: "",
+      isPublic: true,
+    });
+    catalogModal.open();
+  };
+
+  const openEditCatalog = () => {
+    if (!selectedCatalog) {
+      return;
+    }
+
+    setCatalogError(null);
+    setEditingCatalogId(selectedCatalog.id);
+    catalogForm.setValues({
+      name: selectedCatalog.name,
+      description: selectedCatalog.description ?? "",
+      currencyCode: selectedCatalog.currencyCode,
+      status: selectedCatalog.status,
+      priceDisplayMode: selectedCatalog.priceDisplayMode,
+      siteId: selectedCatalog.siteId ?? "",
+      locationId: selectedCatalog.locationId ?? "",
+      brandThemeId: selectedCatalog.brandThemeId ?? "",
+      isPublic: selectedCatalog.isPublic,
+    });
+    catalogModal.open();
+  };
+
+  const openCreateCategory = () => {
+    setCategoryError(null);
+    categoryForm.setValues({
+      name: "",
+      description: "",
+      parentCategoryId: "",
+      isVisible: true,
+    });
+    categoryModal.open();
+  };
+
+  const handleCatalogSubmit = catalogForm.onSubmit(async (values) => {
+    const payload = {
+      name: values.name.trim(),
+      description: values.description.trim() || null,
+      currencyCode: values.currencyCode.trim().toUpperCase(),
+      status: values.status as "draft" | "active" | "archived",
+      priceDisplayMode: values.priceDisplayMode as
+        | "exact"
+        | "starting_at"
+        | "hidden",
+      siteId: values.siteId || null,
+      locationId: values.locationId || null,
+      brandThemeId: values.brandThemeId || null,
+      isPublic: values.isPublic,
+    };
+
+    if (editingCatalogId) {
+      await updateCatalogMutation.mutateAsync({ id: editingCatalogId, ...payload });
+      return;
+    }
+
+    await catalogMutation.mutateAsync(payload);
+  });
+
+  const handleCategorySubmit = categoryForm.onSubmit(async (values) => {
+    if (!selectedCatalogId) {
+      setCategoryError("Selecciona un catalogo antes de crear categorias");
+      return;
+    }
+
+    await createCategoryMutation.mutateAsync({
+      catalogId: selectedCatalogId,
+      name: values.name.trim(),
+      description: values.description.trim() || null,
+      parentCategoryId: values.parentCategoryId || null,
+      isVisible: values.isVisible,
+    });
+  });
+
+  const catalogOptions = catalogs.map((catalog) => ({
+    value: catalog.id,
+    label: catalog.name,
+  }));
+  const siteOptions = siteData.items.map((site) => ({
+    value: site.id,
+    label: site.name,
+  }));
+  const locationOptions = locationData.items.map((location) => ({
+    value: location.id,
+    label: location.name,
+  }));
+  const themeOptions = themeData.items.map((theme) => ({
+    value: theme.id,
+    label: theme.name,
+  }));
+  const categoryOptions = categories.map((category) => ({
+    value: category.id,
+    label: category.name,
+  }));
 
   return (
-    <Flex h="calc(100vh - 80px)" gap="xl" wrap="nowrap">
-      {/* Left Area: Builder Controls (60%) */}
-      <Stack style={{ flex: 1 }} p="xl" gap="xl">
-        <Box mb="xl">
-          <Badge
-            color="brand.1"
-            c="brand.8"
-            size="lg"
-            radius="sm"
-            mb="xs"
-            style={{ fontWeight: 800 }}
-          >
-            Editor Visual
-          </Badge>
-          <Title
-            order={1}
-            fw={900}
-            style={{ letterSpacing: "-0.04em", fontSize: "2.5rem" }}
-          >
-            Módulo de Catálogo
-          </Title>
-          <Text c="var(--mantine-color-warm-6)" mt={8} size="lg">
-            Personaliza la experiencia de tus clientes. Los cambios se guardan y
-            reflejan al instante. Sin procesos complicados.
-          </Text>
-        </Box>
+    <Stack gap="xl">
+      <Modal
+        opened={catalogModalOpened}
+        onClose={catalogModal.close}
+        title={editingCatalogId ? "Editar catalogo" : "Nuevo catalogo"}
+        size="lg"
+      >
+        <form onSubmit={handleCatalogSubmit}>
+          <Stack gap="md">
+            {catalogError ? <Alert color="red">{catalogError}</Alert> : null}
 
-        <Stack gap="lg">
-          <Flex align="center" justify="space-between">
-            <Title order={3} fw={800} style={{ letterSpacing: "-0.02em" }}>
-              Categorías
-            </Title>
+            <TextInput
+              label="Nombre"
+              placeholder="Ej: Menu principal"
+              value={catalogForm.values.name}
+              onChange={(event) =>
+                catalogForm.setFieldValue("name", event.currentTarget.value)
+              }
+              error={catalogForm.errors.name}
+            />
+
+            <TextInput
+              label="Descripcion"
+              placeholder="Que vende este catalogo"
+              value={catalogForm.values.description}
+              onChange={(event) =>
+                catalogForm.setFieldValue(
+                  "description",
+                  event.currentTarget.value,
+                )
+              }
+            />
+
+            <Group grow>
+              <TextInput
+                label="Moneda"
+                placeholder="MXN"
+                maxLength={3}
+                value={catalogForm.values.currencyCode}
+                onChange={(event) =>
+                  catalogForm.setFieldValue(
+                    "currencyCode",
+                    event.currentTarget.value,
+                  )
+                }
+                error={catalogForm.errors.currencyCode}
+              />
+
+              <Select
+                label="Estado"
+                data={catalogStatusOptions}
+                value={catalogForm.values.status}
+                onChange={(value) =>
+                  catalogForm.setFieldValue("status", value ?? "draft")
+                }
+                allowDeselect={false}
+              />
+            </Group>
+
+            <Select
+              label="Modo de precio"
+              data={priceDisplayModeOptions}
+              value={catalogForm.values.priceDisplayMode}
+              onChange={(value) =>
+                catalogForm.setFieldValue("priceDisplayMode", value ?? "exact")
+              }
+              allowDeselect={false}
+            />
+
+            <Group grow>
+              <Select
+                clearable
+                label="Sitio asociado"
+                data={siteOptions}
+                value={catalogForm.values.siteId || null}
+                onChange={(value) =>
+                  catalogForm.setFieldValue("siteId", value ?? "")
+                }
+              />
+              <Select
+                clearable
+                label="Sede"
+                data={locationOptions}
+                value={catalogForm.values.locationId || null}
+                onChange={(value) =>
+                  catalogForm.setFieldValue("locationId", value ?? "")
+                }
+              />
+            </Group>
+
+            <Select
+              clearable
+              label="Tema de marca"
+              data={themeOptions}
+              value={catalogForm.values.brandThemeId || null}
+              onChange={(value) =>
+                catalogForm.setFieldValue("brandThemeId", value ?? "")
+              }
+            />
+
+            <Switch
+              label="Visible al publico"
+              checked={catalogForm.values.isPublic}
+              onChange={(event) =>
+                catalogForm.setFieldValue("isPublic", event.currentTarget.checked)
+              }
+            />
+
             <Button
-              variant="light"
+              type="submit"
               color="brand.6"
-              leftSection={<Plus size={18} strokeWidth={3} />}
-              radius="xl"
-              size="md"
-              style={{ fontWeight: 700 }}
+              loading={catalogMutation.isPending || updateCatalogMutation.isPending}
             >
-              Nueva categoría
+              {editingCatalogId ? "Guardar cambios" : "Crear catalogo"}
             </Button>
-          </Flex>
+          </Stack>
+        </form>
+      </Modal>
 
-          <Stack gap="sm">
-            {categories.map((cat) => (
-              <Box
-                key={cat.id}
-                p="md"
-                style={{
-                  backgroundColor: "white",
-                  borderRadius: "2rem",
-                  transition: "all 0.4s cubic-bezier(0.23, 1, 0.32, 1)",
-                  cursor: "grab",
-                  boxShadow: "0 8px 24px rgba(220, 210, 200, 0.4)",
-                  border: "2px solid transparent",
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.transform = "translateY(-4px)";
-                  e.currentTarget.style.boxShadow =
-                    "0 16px 32px rgba(220, 210, 200, 0.6)";
-                  e.currentTarget.style.borderColor =
-                    "var(--mantine-color-brand-1)";
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.transform = "translateY(0)";
-                  e.currentTarget.style.boxShadow =
-                    "0 8px 24px rgba(220, 210, 200, 0.4)";
-                  e.currentTarget.style.borderColor = "transparent";
-                }}
-              >
-                <Group wrap="nowrap" align="center">
-                  <ActionIcon variant="transparent" color="warm.4" size="lg">
-                    <GripVertical size={20} style={{ strokeWidth: 2.5 }} />
-                  </ActionIcon>
+      <Modal
+        opened={categoryModalOpened}
+        onClose={categoryModal.close}
+        title="Nueva categoria"
+      >
+        <form onSubmit={handleCategorySubmit}>
+          <Stack gap="md">
+            {categoryError ? <Alert color="red">{categoryError}</Alert> : null}
 
-                  <TextInput
-                    variant="unstyled"
-                    defaultValue={cat.name}
-                    style={{ flex: 1 }}
-                    styles={{
-                      input: {
-                        fontSize: "1.1rem",
-                        fontWeight: 700,
-                        color: "var(--mantine-color-dark-8)",
-                      },
-                    }}
-                  />
+            <TextInput
+              label="Nombre"
+              placeholder="Ej: Bebidas frias"
+              value={categoryForm.values.name}
+              onChange={(event) =>
+                categoryForm.setFieldValue("name", event.currentTarget.value)
+              }
+              error={categoryForm.errors.name}
+            />
 
-                  <Badge
-                    variant="light"
-                    color="brand.6"
-                    radius="xl"
-                    size="lg"
-                    style={{
-                      textTransform: "lowercase",
-                      fontWeight: 800,
-                      backgroundColor: "var(--mantine-color-brand-0)",
-                      color: "var(--mantine-color-brand-8)",
-                    }}
-                  >
-                    {cat.items} prods
+            <TextInput
+              label="Descripcion"
+              placeholder="Opcional"
+              value={categoryForm.values.description}
+              onChange={(event) =>
+                categoryForm.setFieldValue(
+                  "description",
+                  event.currentTarget.value,
+                )
+              }
+            />
+
+            <Select
+              clearable
+              label="Categoria padre"
+              data={categoryOptions}
+              value={categoryForm.values.parentCategoryId || null}
+              onChange={(value) =>
+                categoryForm.setFieldValue("parentCategoryId", value ?? "")
+              }
+            />
+
+            <Switch
+              label="Visible en el catalogo"
+              checked={categoryForm.values.isVisible}
+              onChange={(event) =>
+                categoryForm.setFieldValue(
+                  "isVisible",
+                  event.currentTarget.checked,
+                )
+              }
+            />
+
+            <Button
+              type="submit"
+              color="brand.6"
+              loading={createCategoryMutation.isPending}
+            >
+              Crear categoria
+            </Button>
+          </Stack>
+        </form>
+      </Modal>
+
+      <Group justify="space-between" align="flex-start">
+        <div>
+          <Title order={2} c="dark.8" style={{ letterSpacing: "-0.02em" }}>
+            Catalogos
+          </Title>
+          <Text c="dimmed" mt={4}>
+            Administra catalogos, temas asociados y la estructura de categorias.
+          </Text>
+        </div>
+
+        <Group>
+          <Button variant="light" color="brand.6" onClick={openCreateCatalog}>
+            <Group gap={8} wrap="nowrap">
+              <FolderPlus size={16} />
+              <span>Nuevo catalogo</span>
+            </Group>
+          </Button>
+          <Button
+            color="brand.6"
+            onClick={openEditCatalog}
+            disabled={!selectedCatalog}
+          >
+            Editar catalogo
+          </Button>
+        </Group>
+      </Group>
+
+      <Card withBorder radius="lg" p="lg">
+        <Group align="end">
+          <Select
+            label="Catalogo activo"
+            placeholder="Selecciona un catalogo"
+            data={catalogOptions}
+            value={selectedCatalogId}
+            onChange={(value) => {
+              startTransition(() => {
+                navigate({
+                  search: (previous) => ({
+                    ...previous,
+                    catalogId: value ?? undefined,
+                  }),
+                });
+              });
+            }}
+            style={{ flex: 1 }}
+          />
+          <Button
+            variant="default"
+            onClick={openCreateCategory}
+            disabled={!selectedCatalogId}
+          >
+            <Group gap={8} wrap="nowrap">
+              <Plus size={16} />
+              <span>Nueva categoria</span>
+            </Group>
+          </Button>
+        </Group>
+      </Card>
+
+      {selectedCatalog ? (
+        <SimpleGrid cols={{ base: 1, md: 3 }} spacing="lg">
+          <Card withBorder radius="lg" p="lg">
+            <Group justify="space-between" mb="sm">
+              <Text fw={700}>Estado</Text>
+              <Badge color={selectedCatalog.status === "active" ? "teal" : "gray"}>
+                {selectedCatalog.status}
+              </Badge>
+            </Group>
+            <Title order={3}>{selectedCatalog.name}</Title>
+            <Text c="dimmed" mt="xs">
+              {selectedCatalog.description || "Sin descripcion"}
+            </Text>
+            <Divider my="md" />
+            <Stack gap={8}>
+              <Text size="sm">Moneda: {selectedCatalog.currencyCode}</Text>
+              <Text size="sm">
+                Precios: {selectedCatalog.priceDisplayMode.replaceAll("_", " ")}
+              </Text>
+              <Text size="sm">
+                Publico: {selectedCatalog.isPublic ? "Si" : "No"}
+              </Text>
+            </Stack>
+          </Card>
+
+          <Card withBorder radius="lg" p="lg">
+            <Group justify="space-between" mb="sm">
+              <Text fw={700}>Categorias</Text>
+              <Badge variant="light">{categories.length}</Badge>
+            </Group>
+            <Text c="dimmed" size="sm">
+              Estructura visible para navegar el catalogo.
+            </Text>
+            <Divider my="md" />
+            <Stack gap="sm">
+              {categories.length > 0 ? (
+                categories.map((category) => (
+                  <Group key={category.id} justify="space-between">
+                    <div>
+                      <Text fw={600}>{category.name}</Text>
+                      <Text size="xs" c="dimmed">
+                        {category.description || "Sin descripcion"}
+                      </Text>
+                    </div>
+                    <Badge color={category.isVisible ? "teal" : "gray"}>
+                      {category.isVisible ? "Visible" : "Oculta"}
+                    </Badge>
+                  </Group>
+                ))
+              ) : (
+                <Alert color="gray">Aun no hay categorias para este catalogo.</Alert>
+              )}
+            </Stack>
+          </Card>
+
+          <Card withBorder radius="lg" p="lg">
+            <Group justify="space-between" mb="sm">
+              <Text fw={700}>Conexiones</Text>
+              <Layers3 size={16} />
+            </Group>
+            <Text c="dimmed" size="sm">
+              Recursos relacionados usados para publicar este catalogo.
+            </Text>
+            <Divider my="md" />
+            <Stack gap="sm">
+              <Text size="sm">
+                Sitio: {siteData.items.find((item) => item.id === selectedCatalog.siteId)?.name || "Sin asociar"}
+              </Text>
+              <Text size="sm">
+                Sede: {locationData.items.find((item) => item.id === selectedCatalog.locationId)?.name || "Sin asociar"}
+              </Text>
+              <Text size="sm">
+                Tema: {themeData.items.find((item) => item.id === selectedCatalog.brandThemeId)?.name || "Sin asociar"}
+              </Text>
+            </Stack>
+          </Card>
+        </SimpleGrid>
+      ) : (
+        <Alert color="gray">No hay catalogos creados todavia. Crea uno para empezar.</Alert>
+      )}
+
+      <Card withBorder radius="lg" p="lg">
+        <Group justify="space-between" mb="md">
+          <Group gap="sm">
+            <Tags size={18} />
+            <Title order={4}>Resumen de categorias</Title>
+          </Group>
+          <Badge variant="light">{categories.length}</Badge>
+        </Group>
+
+        {categoriesQuery.isFetching ? (
+          <Text c="dimmed">Actualizando categorias...</Text>
+        ) : categories.length > 0 ? (
+          <SimpleGrid cols={{ base: 1, md: 2 }} spacing="md">
+            {categories.map((category) => (
+              <Card key={category.id} withBorder radius="md" p="md">
+                <Group justify="space-between" align="flex-start">
+                  <div>
+                    <Text fw={700}>{category.name}</Text>
+                    <Text c="dimmed" size="sm" mt={4}>
+                      {category.description || "Sin descripcion"}
+                    </Text>
+                  </div>
+                  <Badge color={category.isVisible ? "teal" : "gray"}>
+                    {category.isVisible ? "Visible" : "Oculta"}
                   </Badge>
                 </Group>
-              </Box>
+              </Card>
             ))}
-          </Stack>
-        </Stack>
-      </Stack>
-
-      {/* Right Area: Live Preview (40%) */}
-      <Box
-        p="xl"
-        bg="gray.0"
-        style={{
-          width: "450px",
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          borderLeft: "1px solid var(--mantine-color-gray-2)",
-          borderTopLeftRadius: "32px",
-        }}
-      >
-        <Stack align="center" gap="md">
-          <Group gap="xs">
-            <Smartphone size={18} color="var(--mantine-color-gray-6)" />
-            <Text
-              size="sm"
-              fw={600}
-              c="dimmed"
-              tt="uppercase"
-              style={{ letterSpacing: 1 }}
-            >
-              Vista Previa en Vivo
-            </Text>
-          </Group>
-          <LivePreview />
-        </Stack>
-      </Box>
-    </Flex>
+          </SimpleGrid>
+        ) : (
+          <Alert color="gray">
+            Este catalogo aun no tiene categorias. Crea una para empezar a ordenar
+            el contenido.
+          </Alert>
+        )}
+      </Card>
+    </Stack>
   );
 }

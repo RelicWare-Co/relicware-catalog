@@ -39,8 +39,12 @@ function getDashboardRouteRank(pathname: string) {
     return 2;
   }
 
-  if (pathname.startsWith("/dashboard/settings")) {
+  if (pathname.startsWith("/dashboard/organizations")) {
     return 3;
+  }
+
+  if (pathname.startsWith("/dashboard/settings")) {
+    return 4;
   }
 
   return 99;

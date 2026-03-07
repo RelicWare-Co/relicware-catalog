@@ -1,352 +1,650 @@
 import {
   ActionIcon,
+  Alert,
   Badge,
   Button,
   Card,
-  FileButton,
   Grid,
   Group,
-  Image,
   Menu,
   Modal,
-  NumberInput,
   Select,
   Stack,
+  Switch,
   Text,
   TextInput,
   Title,
 } from "@mantine/core";
+import { useForm } from "@mantine/form";
 import { useDisclosure } from "@mantine/hooks";
-import { createFileRoute } from "@tanstack/react-router";
 import {
-  Edit,
-  MoreVertical,
-  Plus,
-  Search,
-  Share2,
-  Trash,
-  Upload,
-} from "lucide-react";
-import { useState } from "react";
+  useMutation,
+  useQuery,
+  useQueryClient,
+  useSuspenseQuery,
+} from "@tanstack/react-query";
+import { createFileRoute } from "@tanstack/react-router";
+import { Edit, MoreVertical, Plus, Search, Trash } from "lucide-react";
+import { startTransition, useMemo, useState } from "react";
+
+import { getErrorMessage } from "#/lib/get-error-message";
+import { orpc } from "#/orpc/client";
+
+const listInput = { limit: 50, offset: 0 } as const;
+const catalogListQueryOptions = () => orpc.catalog.list.queryOptions({ input: listInput });
+const categoryListQueryOptions = (catalogId: string) =>
+  orpc.catalog.listCategories.queryOptions({ input: { id: catalogId } });
+const itemListQueryOptions = (catalogId: string) =>
+  orpc.catalog.listItems.queryOptions({ input: { id: catalogId } });
+
+const itemStatusOptions = [
+  { value: "draft", label: "Borrador" },
+  { value: "active", label: "Activo" },
+  { value: "archived", label: "Archivado" },
+] as const;
 
 export const Route = createFileRoute("/dashboard/products")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    catalogId: typeof search.catalogId === "string" ? search.catalogId : undefined,
+    categoryId: typeof search.categoryId === "string" ? search.categoryId : undefined,
+    status: typeof search.status === "string" ? search.status : undefined,
+    term: typeof search.term === "string" ? search.term : undefined,
+  }),
+  loaderDeps: ({ search }) => ({ catalogId: search.catalogId }),
+  loader: async ({ context, deps }) => {
+    const catalogs = await context.queryClient.ensureQueryData(catalogListQueryOptions());
+    const selectedCatalogId = deps.catalogId ?? catalogs.items[0]?.id;
+
+    if (selectedCatalogId) {
+      await Promise.all([
+        context.queryClient.ensureQueryData(categoryListQueryOptions(selectedCatalogId)),
+        context.queryClient.ensureQueryData(itemListQueryOptions(selectedCatalogId)),
+      ]);
+    }
+  },
   component: ProductsPage,
 });
 
-// Mocked data para inspirar el lado humano y realista de los usuarios (comida, panadería, etc.)
-const mockedProducts = [
-  {
-    id: 1,
-    name: "Pan de Bono Artesanal",
-    category: "Panadería",
-    price: "$ 2.500",
-    status: "Disponible",
-    image:
-      "https://images.unsplash.com/photo-1598373182133-52452f7691ef?w=400&q=80",
-  },
-  {
-    id: 2,
-    name: "Empanada con Ají",
-    category: "Salados",
-    price: "$ 3.000",
-    status: "Disponible",
-    image:
-      "https://images.unsplash.com/photo-1628198622814-727eb188da91?w=400&q=80",
-  },
-  {
-    id: 3,
-    name: "Torta de Tres Leches (Porción)",
-    category: "Postres",
-    price: "$ 8.000",
-    status: "Pocas unidades",
-    image:
-      "https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=400&q=80",
-  },
-  {
-    id: 4,
-    name: "Jugo Natural de Lulo",
-    category: "Bebidas",
-    price: "$ 4.500",
-    status: "Agotado",
-    image:
-      "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=400&q=80",
-  },
-];
+type FilterFormValues = {
+  term: string;
+  categoryId: string;
+  status: string;
+};
+
+type ProductFormValues = {
+  name: string;
+  categoryId: string;
+  shortDescription: string;
+  imageUrl: string;
+  status: string;
+  basePriceAmount: string;
+  inventoryQuantity: string;
+  isAvailable: boolean;
+  isFeatured: boolean;
+  trackInventory: boolean;
+};
 
 function ProductsPage() {
-  const [opened, { open, close }] = useDisclosure(false);
-  const [file, setFile] = useState<File | null>(null);
+  const search = Route.useSearch();
+  const navigate = Route.useNavigate();
+  const queryClient = useQueryClient();
+  const { data: catalogData } = useSuspenseQuery(catalogListQueryOptions());
+  const catalogs = catalogData.items;
+  const selectedCatalogId = search.catalogId ?? catalogs[0]?.id ?? null;
+  const selectedCatalog =
+    catalogs.find((catalog) => catalog.id === selectedCatalogId) ?? null;
+  const categoriesQuery = useQuery({
+    ...categoryListQueryOptions(selectedCatalogId ?? ""),
+    enabled: Boolean(selectedCatalogId),
+  });
+  const itemsQuery = useQuery({
+    ...itemListQueryOptions(selectedCatalogId ?? ""),
+    enabled: Boolean(selectedCatalogId),
+  });
+  const categories = categoriesQuery.data ?? [];
+  const items = itemsQuery.data ?? [];
+  const [productModalOpened, productModal] = useDisclosure(false);
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const filterForm = useForm<FilterFormValues>({
+    mode: "controlled",
+    initialValues: {
+      term: search.term ?? "",
+      categoryId: search.categoryId ?? "",
+      status: search.status ?? "",
+    },
+  });
+
+  const productForm = useForm<ProductFormValues>({
+    mode: "controlled",
+    initialValues: {
+      name: "",
+      categoryId: "",
+      shortDescription: "",
+      imageUrl: "",
+      status: "draft",
+      basePriceAmount: "",
+      inventoryQuantity: "",
+      isAvailable: true,
+      isFeatured: false,
+      trackInventory: false,
+    },
+    validate: {
+      name: (value) =>
+        value.trim().length >= 2 ? null : "Ingresa un nombre valido",
+      basePriceAmount: (value) => {
+        if (!value.trim()) {
+          return null;
+        }
+
+        const parsed = Number(value);
+        return Number.isInteger(parsed) && parsed >= 0
+          ? null
+          : "Usa un entero mayor o igual a 0";
+      },
+      inventoryQuantity: (value) => {
+        if (!value.trim()) {
+          return null;
+        }
+
+        const parsed = Number(value);
+        return Number.isInteger(parsed) && parsed >= 0
+          ? null
+          : "Usa un entero mayor o igual a 0";
+      },
+    },
+  });
+
+  const createItemMutation = useMutation(
+    orpc.catalog.createItem.mutationOptions({
+      onSuccess: async () => {
+        if (selectedCatalogId) {
+          await queryClient.invalidateQueries({
+            queryKey: orpc.catalog.listItems.queryKey({
+              input: { id: selectedCatalogId },
+            }),
+          });
+        }
+        await queryClient.invalidateQueries({ queryKey: orpc.catalog.key() });
+        setSubmitError(null);
+        setEditingItemId(null);
+        productModal.close();
+      },
+      onError: (error) => {
+        setSubmitError(getErrorMessage(error, "No se pudo crear el producto"));
+      },
+    }),
+  );
+
+  const updateItemMutation = useMutation(
+    orpc.catalog.updateItem.mutationOptions({
+      onSuccess: async () => {
+        if (selectedCatalogId) {
+          await queryClient.invalidateQueries({
+            queryKey: orpc.catalog.listItems.queryKey({
+              input: { id: selectedCatalogId },
+            }),
+          });
+        }
+        setSubmitError(null);
+        setEditingItemId(null);
+        productModal.close();
+      },
+      onError: (error) => {
+        setSubmitError(
+          getErrorMessage(error, "No se pudo actualizar el producto"),
+        );
+      },
+    }),
+  );
+
+  const removeItemMutation = useMutation(
+    orpc.catalog.removeItem.mutationOptions({
+      onSuccess: async () => {
+        if (selectedCatalogId) {
+          await queryClient.invalidateQueries({
+            queryKey: orpc.catalog.listItems.queryKey({
+              input: { id: selectedCatalogId },
+            }),
+          });
+        }
+      },
+    }),
+  );
+
+  const filteredItems = useMemo(() => {
+    return items.filter((item) => {
+      const matchesTerm = search.term
+        ? item.name.toLowerCase().includes(search.term.toLowerCase()) ||
+          (item.shortDescription ?? "")
+            .toLowerCase()
+            .includes(search.term.toLowerCase())
+        : true;
+      const matchesCategory = search.categoryId
+        ? item.categoryId === search.categoryId
+        : true;
+      const matchesStatus = search.status ? item.status === search.status : true;
+
+      return matchesTerm && matchesCategory && matchesStatus;
+    });
+  }, [items, search.categoryId, search.status, search.term]);
+
+  const categoryOptions = categories.map((category) => ({
+    value: category.id,
+    label: category.name,
+  }));
+  const catalogOptions = catalogs.map((catalog) => ({
+    value: catalog.id,
+    label: catalog.name,
+  }));
+
+  const openCreateProduct = () => {
+    setSubmitError(null);
+    setEditingItemId(null);
+    productForm.setValues({
+      name: "",
+      categoryId: "",
+      shortDescription: "",
+      imageUrl: "",
+      status: "draft",
+      basePriceAmount: "",
+      inventoryQuantity: "",
+      isAvailable: true,
+      isFeatured: false,
+      trackInventory: false,
+    });
+    productModal.open();
+  };
+
+  const openEditProduct = (item: (typeof items)[number]) => {
+    setSubmitError(null);
+    setEditingItemId(item.id);
+    productForm.setValues({
+      name: item.name,
+      categoryId: item.categoryId ?? "",
+      shortDescription: item.shortDescription ?? "",
+      imageUrl: item.imageUrl ?? "",
+      status: item.status,
+      basePriceAmount:
+        item.basePriceAmount === null ? "" : String(item.basePriceAmount),
+      inventoryQuantity:
+        item.inventoryQuantity === null ? "" : String(item.inventoryQuantity),
+      isAvailable: item.isAvailable,
+      isFeatured: item.isFeatured,
+      trackInventory: item.trackInventory,
+    });
+    productModal.open();
+  };
+
+  const handleProductSubmit = productForm.onSubmit(async (values) => {
+    if (!selectedCatalogId) {
+      setSubmitError("Selecciona un catalogo antes de crear productos");
+      return;
+    }
+
+    const payload = {
+      catalogId: selectedCatalogId,
+      categoryId: values.categoryId || null,
+      name: values.name.trim(),
+      shortDescription: values.shortDescription.trim() || null,
+      imageUrl: values.imageUrl.trim() || null,
+      status: values.status as "draft" | "active" | "archived",
+      basePriceAmount: values.basePriceAmount.trim()
+        ? Number(values.basePriceAmount)
+        : null,
+      inventoryQuantity: values.inventoryQuantity.trim()
+        ? Number(values.inventoryQuantity)
+        : null,
+      isAvailable: values.isAvailable,
+      isFeatured: values.isFeatured,
+      trackInventory: values.trackInventory,
+    };
+
+    if (editingItemId) {
+      await updateItemMutation.mutateAsync({ id: editingItemId, ...payload });
+      return;
+    }
+
+    await createItemMutation.mutateAsync(payload);
+  });
+
+  const handleDeleteProduct = async (itemId: string) => {
+    if (!window.confirm("Esta accion eliminara el producto. Quieres continuar?")) {
+      return;
+    }
+
+    await removeItemMutation.mutateAsync({ id: itemId });
+  };
+
+  const handleFilterSubmit = filterForm.onSubmit((values) => {
+    startTransition(() => {
+      navigate({
+        search: (previous) => ({
+          ...previous,
+          term: values.term.trim() || undefined,
+          categoryId: values.categoryId || undefined,
+          status: values.status || undefined,
+        }),
+      });
+    });
+  });
+
+  if (!selectedCatalogId) {
+    return (
+      <Stack gap="xl">
+        <Title order={2}>Productos</Title>
+        <Alert color="gray">
+          No hay catalogos disponibles todavia. Crea uno primero en la seccion de
+          catalogos.
+        </Alert>
+      </Stack>
+    );
+  }
 
   return (
     <Stack gap="xl">
-      {/* Modal para crear un producto */}
       <Modal
-        opened={opened}
-        onClose={close}
-        title={
-          <Text fw={800} fz="xl" c="dark.8">
-            Nuevo Producto
-          </Text>
-        }
+        opened={productModalOpened}
+        onClose={productModal.close}
+        title={editingItemId ? "Editar producto" : "Nuevo producto"}
         size="lg"
-        overlayProps={{
-          backgroundOpacity: 0.55,
-          blur: 3,
-        }}
-        radius="md"
       >
-        <Stack gap="md">
-          <Group align="center">
-            <div
-              style={{
-                width: 100,
-                height: 100,
-                borderRadius: "var(--mantine-radius-md)",
-                border: "2px dashed var(--mantine-color-warm-4)",
-                backgroundColor: "var(--mantine-color-warm-1)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                overflow: "hidden",
-              }}
+        <form onSubmit={handleProductSubmit}>
+          <Stack gap="md">
+            {submitError ? <Alert color="red">{submitError}</Alert> : null}
+
+            <TextInput
+              label="Nombre"
+              placeholder="Ej: Latte frio"
+              value={productForm.values.name}
+              onChange={(event) =>
+                productForm.setFieldValue("name", event.currentTarget.value)
+              }
+              error={productForm.errors.name}
+            />
+
+            <TextInput
+              label="Descripcion corta"
+              placeholder="Resumen visible en el menu"
+              value={productForm.values.shortDescription}
+              onChange={(event) =>
+                productForm.setFieldValue(
+                  "shortDescription",
+                  event.currentTarget.value,
+                )
+              }
+            />
+
+            <Group grow>
+              <Select
+                clearable
+                label="Categoria"
+                data={categoryOptions}
+                value={productForm.values.categoryId || null}
+                onChange={(value) =>
+                  productForm.setFieldValue("categoryId", value ?? "")
+                }
+              />
+
+              <Select
+                label="Estado"
+                data={itemStatusOptions}
+                value={productForm.values.status}
+                onChange={(value) =>
+                  productForm.setFieldValue("status", value ?? "draft")
+                }
+                allowDeselect={false}
+              />
+            </Group>
+
+            <Group grow>
+              <TextInput
+                label="Precio base"
+                placeholder="12000"
+                value={productForm.values.basePriceAmount}
+                onChange={(event) =>
+                  productForm.setFieldValue(
+                    "basePriceAmount",
+                    event.currentTarget.value,
+                  )
+                }
+                error={productForm.errors.basePriceAmount}
+              />
+              <TextInput
+                label="Inventario"
+                placeholder="25"
+                value={productForm.values.inventoryQuantity}
+                onChange={(event) =>
+                  productForm.setFieldValue(
+                    "inventoryQuantity",
+                    event.currentTarget.value,
+                  )
+                }
+                error={productForm.errors.inventoryQuantity}
+              />
+            </Group>
+
+            <TextInput
+              label="URL de imagen"
+              placeholder="https://..."
+              value={productForm.values.imageUrl}
+              onChange={(event) =>
+                productForm.setFieldValue("imageUrl", event.currentTarget.value)
+              }
+            />
+
+            <Group grow>
+              <Switch
+                label="Disponible"
+                checked={productForm.values.isAvailable}
+                onChange={(event) =>
+                  productForm.setFieldValue(
+                    "isAvailable",
+                    event.currentTarget.checked,
+                  )
+                }
+              />
+              <Switch
+                label="Destacado"
+                checked={productForm.values.isFeatured}
+                onChange={(event) =>
+                  productForm.setFieldValue(
+                    "isFeatured",
+                    event.currentTarget.checked,
+                  )
+                }
+              />
+              <Switch
+                label="Controlar inventario"
+                checked={productForm.values.trackInventory}
+                onChange={(event) =>
+                  productForm.setFieldValue(
+                    "trackInventory",
+                    event.currentTarget.checked,
+                  )
+                }
+              />
+            </Group>
+
+            <Button
+              type="submit"
+              color="brand.6"
+              loading={createItemMutation.isPending || updateItemMutation.isPending}
             >
-              {file ? (
-                <Image
-                  src={URL.createObjectURL(file)}
-                  w="100%"
-                  h="100%"
-                  fit="cover"
-                />
-              ) : (
-                <Upload size={24} color="var(--mantine-color-dimmed)" />
-              )}
-            </div>
-            <FileButton onChange={setFile} accept="image/png,image/jpeg">
-              {(props) => (
-                <Button {...props} variant="light" color="brand.6">
-                  Subir una foto
-                </Button>
-              )}
-            </FileButton>
-            <Text fz="xs" c="dimmed">
-              Resolución recomendada: 800x800. Formatos PNG, JPG.
-            </Text>
-          </Group>
-
-          <TextInput
-            label="Nombre del producto"
-            placeholder="Ej: Empanada de carne"
-            autoFocus
-          />
-
-          <Group grow>
-            <Select
-              label="Categoría"
-              placeholder="Escoge o escribe"
-              data={["Panadería", "Salados", "Postres", "Bebidas", "Almuerzos"]}
-              searchable
-              creatable
-            />
-
-            <NumberInput
-              label="Precio (COP)"
-              placeholder="0"
-              prefix="$ "
-              thousandSeparator="."
-              decimalSeparator=","
-              hideControls
-            />
-          </Group>
-
-          <Select
-            label="Estado"
-            placeholder="¿Hay en inventario?"
-            defaultValue="Disponible"
-            data={[
-              { value: "Disponible", label: "Disponible" },
-              { value: "Agotado", label: "Agotado" },
-              { value: "Pocas unidades", label: "Pocas unidades" },
-            ]}
-          />
-
-          <Button fullWidth mt="md" color="brand.6" size="md">
-            Guardar Producto
-          </Button>
-        </Stack>
+              {editingItemId ? "Guardar cambios" : "Crear producto"}
+            </Button>
+          </Stack>
+        </form>
       </Modal>
 
-      {/* Header del módulo */}
       <Group justify="space-between" align="flex-start">
         <div>
           <Title order={2} c="dark.8" style={{ letterSpacing: "-0.02em" }}>
-            Mis Productos
+            Productos
           </Title>
           <Text c="dimmed" mt={4}>
-            Gestiona tu menú. Sube fotos llamativas y actualiza los precios.
+            Gestiona productos reales del catalogo activo con datos sincronizados.
           </Text>
         </div>
 
-        <Group>
-          <Button
-            variant="light"
-            color="brand.6"
-            leftSection={<Share2 size={16} />}
-          >
-            Compartir Menú
-          </Button>
-          <Button
-            color="brand.6"
-            leftSection={<Plus size={18} />}
-            onClick={open}
-          >
-            Nuevo Producto
-          </Button>
-        </Group>
+        <Button color="brand.6" onClick={openCreateProduct}>
+          <Group gap={8} wrap="nowrap">
+            <Plus size={18} />
+            <span>Nuevo producto</span>
+          </Group>
+        </Button>
       </Group>
 
-      {/* Buscador y Filtros (Simulados) */}
-      <Card
-        padding="md"
-        radius="md"
-        withBorder={false}
-        style={{
-          backgroundColor: "#FFFFFF",
-          boxShadow: "0 2px 10px rgba(0,0,0,0.02)",
-        }}
-      >
-        <Group>
-          <TextInput
-            placeholder="Buscar por nombre (ej: Empanada...)"
-            leftSection={
-              <Search size={16} color="var(--mantine-color-dimmed)" />
-            }
+      <Card withBorder radius="lg" p="lg">
+        <Group align="end">
+          <Select
+            label="Catalogo activo"
+            data={catalogOptions}
+            value={selectedCatalogId}
+            onChange={(value) => {
+              startTransition(() => {
+                navigate({
+                  search: () => ({
+                    catalogId: value ?? undefined,
+                    categoryId: undefined,
+                    status: undefined,
+                    term: undefined,
+                  }),
+                });
+              });
+            }}
+            allowDeselect={false}
             style={{ flex: 1 }}
           />
-          <Button variant="default" c="dark.6">
-            Categoría: Todas
-          </Button>
-          <Button variant="default" c="dark.6">
-            Estado: Todos
-          </Button>
+
+          <Badge size="lg" variant="light">
+            {selectedCatalog?.name ?? "Sin catalogo"}
+          </Badge>
         </Group>
       </Card>
 
-      {/* Grilla de productos - Diseño visual, ya que queremos alejarnos de las tablas aburridas de "admin" */}
-      <Grid gutter="xl">
-        {mockedProducts.map((prod) => (
-          <Grid.Col key={prod.id} span={{ base: 12, sm: 6, md: 4, lg: 3 }}>
-            <Card
-              p="xs"
-              radius="md"
-              withBorder={false}
-              h="100%"
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                backgroundColor: "#FFFFFF",
-                boxShadow: "0 4px 15px rgba(0,0,0,0.03)",
-                position: "relative",
-                transition: "transform 0.2s",
-              }}
-              className="hover:-translate-y-1"
-            >
-              <Card.Section>
-                <div style={{ position: "relative" }}>
-                  <Image
-                    src={prod.image}
-                    height={160}
-                    alt={prod.name}
-                    fallbackSrc="https://placehold.co/400x300?text=Sin+Foto"
-                  />
-                  <Badge
-                    color={
-                      prod.status === "Disponible"
-                        ? "teal.5"
-                        : prod.status === "Agotado"
-                          ? "red.5"
-                          : "orange.5"
-                    }
-                    variant="filled"
-                    radius="sm"
-                    style={{ position: "absolute", top: 12, left: 12 }}
-                  >
-                    {prod.status}
-                  </Badge>
-                </div>
-              </Card.Section>
+      <Card withBorder radius="lg" p="lg">
+        <form onSubmit={handleFilterSubmit}>
+          <Group align="end">
+            <TextInput
+              label="Buscar"
+              placeholder="Nombre o descripcion"
+              leftSection={<Search size={16} />}
+              value={filterForm.values.term}
+              onChange={(event) =>
+                filterForm.setFieldValue("term", event.currentTarget.value)
+              }
+              style={{ flex: 1 }}
+            />
+            <Select
+              clearable
+              label="Categoria"
+              data={categoryOptions}
+              value={filterForm.values.categoryId || null}
+              onChange={(value) =>
+                filterForm.setFieldValue("categoryId", value ?? "")
+              }
+              style={{ minWidth: 220 }}
+            />
+            <Select
+              clearable
+              label="Estado"
+              data={itemStatusOptions}
+              value={filterForm.values.status || null}
+              onChange={(value) => filterForm.setFieldValue("status", value ?? "")}
+              style={{ minWidth: 180 }}
+            />
+            <Button type="submit" variant="default">
+              Aplicar
+            </Button>
+          </Group>
+        </form>
+      </Card>
 
-              <Stack gap={4} mt="md" px="xs" pb="sm" style={{ flex: 1 }}>
-                <Text fz="xs" tt="uppercase" fw={700} c="dimmed">
-                  {prod.category}
-                </Text>
+      {itemsQuery.isFetching ? (
+        <Text c="dimmed">Actualizando productos...</Text>
+      ) : filteredItems.length > 0 ? (
+        <Grid gutter="lg">
+          {filteredItems.map((item) => {
+            const categoryName =
+              categories.find((category) => category.id === item.categoryId)?.name ||
+              "Sin categoria";
 
-                <Group justify="space-between" align="flex-start" wrap="nowrap">
-                  <Text fw={700} fz="md" c="dark.8" lineClamp={2}>
-                    {prod.name}
-                  </Text>
+            return (
+              <Grid.Col key={item.id} span={{ base: 12, sm: 6, md: 4 }}>
+                <Card withBorder radius="lg" p="lg" h="100%">
+                  <Stack gap="sm" h="100%">
+                    <Group justify="space-between" align="flex-start" wrap="nowrap">
+                      <div>
+                        <Text fz="xs" tt="uppercase" fw={700} c="dimmed">
+                          {categoryName}
+                        </Text>
+                        <Text fw={700} fz="lg" c="dark.8" mt={4}>
+                          {item.name}
+                        </Text>
+                      </div>
 
-                  <Menu shadow="md" position="bottom-end">
-                    <Menu.Target>
-                      <ActionIcon variant="subtle" color="gray">
-                        <MoreVertical size={16} />
-                      </ActionIcon>
-                    </Menu.Target>
-                    <Menu.Dropdown>
-                      <Menu.Item leftSection={<Edit size={14} />}>
-                        Editar
-                      </Menu.Item>
-                      <Menu.Item color="red" leftSection={<Trash size={14} />}>
-                        Eliminar
-                      </Menu.Item>
-                    </Menu.Dropdown>
-                  </Menu>
-                </Group>
+                      <Menu position="bottom-end">
+                        <Menu.Target>
+                          <ActionIcon variant="subtle" color="gray">
+                            <MoreVertical size={16} />
+                          </ActionIcon>
+                        </Menu.Target>
+                        <Menu.Dropdown>
+                          <Menu.Item
+                            leftSection={<Edit size={14} />}
+                            onClick={() => openEditProduct(item)}
+                          >
+                            Editar
+                          </Menu.Item>
+                          <Menu.Item
+                            color="red"
+                            leftSection={<Trash size={14} />}
+                            onClick={() => handleDeleteProduct(item.id)}
+                          >
+                            Eliminar
+                          </Menu.Item>
+                        </Menu.Dropdown>
+                      </Menu>
+                    </Group>
 
-                <Text fw={800} fz="lg" c="brand.6" mt="auto">
-                  {prod.price}
-                </Text>
-              </Stack>
-            </Card>
-          </Grid.Col>
-        ))}
+                    <Text c="dimmed" size="sm">
+                      {item.shortDescription || "Sin descripcion corta"}
+                    </Text>
 
-        {/* Tarjeta para Agregar uno nuevo (Empty State / Acción primaria inline) */}
-        <Grid.Col span={{ base: 12, sm: 6, md: 4, lg: 3 }}>
-          <Card
-            p="xl"
-            radius="md"
-            withBorder={false}
-            onClick={open}
-            style={{
-              backgroundColor: "var(--mantine-color-warm-2)",
-              border: "2px dashed var(--mantine-color-warm-4)",
-              cursor: "pointer",
-              height: "100%",
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              minHeight: 280,
-            }}
-          >
-            <ActionIcon
-              variant="light"
-              color="brand.6"
-              size={60}
-              radius="xl"
-              mb="md"
-            >
-              <Plus size={30} />
-            </ActionIcon>
-            <Text fw={700} c="dark.8" ta="center">
-              Añadir nuevo plato o producto
-            </Text>
-            <Text fz="sm" c="dimmed" ta="center" mt={4}>
-              Sube foto, título y precio
-            </Text>
-          </Card>
-        </Grid.Col>
-      </Grid>
+                    <Group gap="xs">
+                      <Badge color={item.isAvailable ? "teal" : "gray"}>
+                        {item.isAvailable ? "Disponible" : "No disponible"}
+                      </Badge>
+                      <Badge color={item.status === "active" ? "blue" : "gray"}>
+                        {item.status}
+                      </Badge>
+                      {item.isFeatured ? <Badge color="orange">Destacado</Badge> : null}
+                    </Group>
+
+                    <Group justify="space-between" mt="auto">
+                      <Text fw={800} c="brand.6">
+                        {item.basePriceAmount === null
+                          ? "Sin precio"
+                          : `$ ${item.basePriceAmount.toLocaleString("es-CO")}`}
+                      </Text>
+                      <Text size="sm" c="dimmed">
+                        Inventario: {item.inventoryQuantity ?? "-"}
+                      </Text>
+                    </Group>
+                  </Stack>
+                </Card>
+              </Grid.Col>
+            );
+          })}
+        </Grid>
+      ) : (
+        <Alert color="gray">
+          No hay productos que coincidan con los filtros actuales para este
+          catalogo.
+        </Alert>
+      )}
     </Stack>
   );
 }
