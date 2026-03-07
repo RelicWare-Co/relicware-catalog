@@ -14,6 +14,7 @@ import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
 import { Route as DashboardProductsRouteImport } from './routes/dashboard/products'
+import { Route as DashboardCatalogsRouteImport } from './routes/dashboard/catalogs'
 import { Route as ApiSplatRouteImport } from './routes/api.$'
 import { Route as ApiRpcSplatRouteImport } from './routes/api.rpc.$'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
@@ -43,6 +44,11 @@ const DashboardProductsRoute = DashboardProductsRouteImport.update({
   path: '/products',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardCatalogsRoute = DashboardCatalogsRouteImport.update({
+  id: '/catalogs',
+  path: '/catalogs',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const ApiSplatRoute = ApiSplatRouteImport.update({
   id: '/api/$',
   path: '/api/$',
@@ -64,6 +70,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRouteWithChildren
   '/login': typeof LoginRoute
   '/api/$': typeof ApiSplatRoute
+  '/dashboard/catalogs': typeof DashboardCatalogsRoute
   '/dashboard/products': typeof DashboardProductsRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -73,6 +80,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/api/$': typeof ApiSplatRoute
+  '/dashboard/catalogs': typeof DashboardCatalogsRoute
   '/dashboard/products': typeof DashboardProductsRoute
   '/dashboard': typeof DashboardIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -84,6 +92,7 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRouteWithChildren
   '/login': typeof LoginRoute
   '/api/$': typeof ApiSplatRoute
+  '/dashboard/catalogs': typeof DashboardCatalogsRoute
   '/dashboard/products': typeof DashboardProductsRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -96,6 +105,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/login'
     | '/api/$'
+    | '/dashboard/catalogs'
     | '/dashboard/products'
     | '/dashboard/'
     | '/api/auth/$'
@@ -105,6 +115,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/api/$'
+    | '/dashboard/catalogs'
     | '/dashboard/products'
     | '/dashboard'
     | '/api/auth/$'
@@ -115,6 +126,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/login'
     | '/api/$'
+    | '/dashboard/catalogs'
     | '/dashboard/products'
     | '/dashboard/'
     | '/api/auth/$'
@@ -167,6 +179,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardProductsRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/dashboard/catalogs': {
+      id: '/dashboard/catalogs'
+      path: '/catalogs'
+      fullPath: '/dashboard/catalogs'
+      preLoaderRoute: typeof DashboardCatalogsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/api/$': {
       id: '/api/$'
       path: '/api/$'
@@ -192,11 +211,13 @@ declare module '@tanstack/react-router' {
 }
 
 interface DashboardRouteChildren {
+  DashboardCatalogsRoute: typeof DashboardCatalogsRoute
   DashboardProductsRoute: typeof DashboardProductsRoute
   DashboardIndexRoute: typeof DashboardIndexRoute
 }
 
 const DashboardRouteChildren: DashboardRouteChildren = {
+  DashboardCatalogsRoute: DashboardCatalogsRoute,
   DashboardProductsRoute: DashboardProductsRoute,
   DashboardIndexRoute: DashboardIndexRoute,
 }
