@@ -545,7 +545,7 @@ function ProductsPage() {
               onChange={(value) =>
                 filterForm.setFieldValue("categoryId", value ?? "")
               }
-              style={{ minWidth: 220 }}
+              style={{ flex: 1, minWidth: "min(100%, 220px)" }}
             />
             <Select
               clearable
@@ -553,7 +553,7 @@ function ProductsPage() {
               data={itemStatusOptions}
               value={filterForm.values.status || null}
               onChange={(value) => filterForm.setFieldValue("status", value ?? "")}
-              style={{ minWidth: 180 }}
+              style={{ flex: 1, minWidth: "min(100%, 180px)" }}
             />
             <Button type="submit" variant="default">
               Aplicar
@@ -587,7 +587,7 @@ function ProductsPage() {
 
                       <Menu position="bottom-end">
                         <Menu.Target>
-                          <ActionIcon variant="subtle" color="gray">
+                          <ActionIcon variant="subtle" color="gray" aria-label="Opciones del producto">
                             <MoreVertical size={16} />
                           </ActionIcon>
                         </Menu.Target>

@@ -6,6 +6,7 @@ import {
   SimpleGrid,
   Stack,
   Text,
+  ThemeIcon,
   Title,
 } from "@mantine/core";
 import { useSuspenseQuery } from "@tanstack/react-query";
@@ -104,19 +105,17 @@ function DashboardOverview() {
             key={stat.title}
             padding="xl"
             radius="md"
-            withBorder={false}
-            style={{
-              backgroundColor: "#FFFFFF",
-              boxShadow: "0 4px 15px rgba(0,0,0,0.03)",
-            }}
+            withBorder
+            shadow="sm"
+            bg="white"
           >
             <Group justify="space-between">
               <Text size="sm" c="dimmed" fw={600}>
                 {stat.title}
               </Text>
-              <ActionIcon variant="light" color="brand.6" size="lg" radius="md">
-                <stat.icon size="1.2rem" />
-              </ActionIcon>
+                <ThemeIcon variant="light" color="brand.6" size="lg" radius="md">
+                  <stat.icon size="1.2rem" />
+                </ThemeIcon>
             </Group>
 
             <Text fw={800} fz={32} c="dark.8" mt={20} style={{ lineHeight: 1 }}>
@@ -133,11 +132,9 @@ function DashboardOverview() {
         <Card
           padding="xl"
           radius="md"
-          withBorder={false}
-          style={{
-            backgroundColor: "#FFFFFF",
-            boxShadow: "0 4px 15px rgba(0,0,0,0.03)",
-          }}
+          withBorder
+          shadow="sm"
+          bg="white"
         >
           <Title order={3} fz={20} mb="xs" c="dark.8">
             Proximos pasos
@@ -198,6 +195,7 @@ function DashboardOverview() {
                     to={task.to}
                     variant="transparent"
                     color="brand.6"
+                    aria-label={`Ir a ${task.label}`}
                   >
                     <ArrowRight size={20} />
                   </ActionIcon>
@@ -210,11 +208,9 @@ function DashboardOverview() {
         <Card
           padding="xl"
           radius="md"
-          withBorder={false}
-          style={{
-            backgroundColor: "#FFFFFF",
-            boxShadow: "0 4px 15px rgba(0,0,0,0.03)",
-          }}
+          withBorder
+          shadow="sm"
+          bg="white"
         >
           <Title order={3} fz={20} mb="xs" c="dark.8">
             Cobertura actual

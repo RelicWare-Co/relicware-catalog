@@ -137,7 +137,7 @@ function OrganizationsPage() {
   const activeRole = activeMemberRole?.role;
   const canUpdateActiveOrganization = activeRole
     ? authClient.organization.checkRolePermission({
-        role: activeRole,
+        role: activeRole as any,
         permissions: {
           organization: ["update"],
         },
@@ -145,7 +145,7 @@ function OrganizationsPage() {
     : false;
   const canDeleteActiveOrganization = activeRole
     ? authClient.organization.checkRolePermission({
-        role: activeRole,
+        role: activeRole as any,
         permissions: {
           organization: ["delete"],
         },
@@ -168,7 +168,7 @@ function OrganizationsPage() {
 
   const handleCompletionRedirect = () => {
     if (redirectPath) {
-      window.location.replace(redirectPath);
+      window.location.href = redirectPath;
       return;
     }
 
