@@ -39,7 +39,12 @@ async function getLocationOrThrow(locationId: string, organizationId: string) {
   const [location] = await db
     .select()
     .from(locations)
-    .where(and(eq(locations.id, locationId), eq(locations.organizationId, organizationId)))
+    .where(
+      and(
+        eq(locations.id, locationId),
+        eq(locations.organizationId, organizationId),
+      ),
+    )
     .limit(1);
 
   if (!location) {
@@ -57,13 +62,19 @@ const deleteLocationProcedure = withPermission({ location: ["delete"] });
 const readLeadProcedure = withPermission({ leadRequest: ["read"] });
 const updateLeadProcedure = withPermission({ leadRequest: ["update"] });
 
-const readReservationProcedure = withPermission({ reservationRequest: ["read"] });
-const updateReservationProcedure = withPermission({ reservationRequest: ["update"] });
+const readReservationProcedure = withPermission({
+  reservationRequest: ["read"],
+});
+const updateReservationProcedure = withPermission({
+  reservationRequest: ["update"],
+});
 
 export const listLocations = readLocationProcedure
   .input(paginationSchema)
   .handler(async ({ input, context }) => {
-    const conditions = [eq(locations.organizationId, context.activeOrganizationId)];
+    const conditions = [
+      eq(locations.organizationId, context.activeOrganizationId),
+    ];
 
     if (input.search) {
       conditions.push(like(locations.name, `%${input.search}%`));
@@ -118,12 +129,17 @@ export const createLocation = createLocationProcedure
 export const updateLocation = updateLocationProcedure
   .input(updateLocationSchema)
   .handler(async ({ input, context }) => {
-    const current = await getLocationOrThrow(input.id, context.activeOrganizationId);
+    const current = await getLocationOrThrow(
+      input.id,
+      context.activeOrganizationId,
+    );
     const [updated] = await db
       .update(locations)
       .set({
         name: input.name ?? current.name,
-        slug: input.slug ? resolveSlug(input.slug, input.name ?? current.name) : current.slug,
+        slug: input.slug
+          ? resolveSlug(input.slug, input.name ?? current.name)
+          : current.slug,
         addressLine1:
           input.addressLine1 === undefined
             ? current.addressLine1
@@ -133,26 +149,38 @@ export const updateLocation = updateLocationProcedure
             ? current.addressLine2
             : asNullableText(input.addressLine2),
         district:
-          input.district === undefined ? current.district : asNullableText(input.district),
-        city: input.city === undefined ? current.city : asNullableText(input.city),
-        state: input.state === undefined ? current.state : asNullableText(input.state),
+          input.district === undefined
+            ? current.district
+            : asNullableText(input.district),
+        city:
+          input.city === undefined ? current.city : asNullableText(input.city),
+        state:
+          input.state === undefined
+            ? current.state
+            : asNullableText(input.state),
         postalCode:
           input.postalCode === undefined
             ? current.postalCode
             : asNullableText(input.postalCode),
         countryCode: input.countryCode?.toUpperCase() ?? current.countryCode,
-        phone: input.phone === undefined ? current.phone : asNullableText(input.phone),
+        phone:
+          input.phone === undefined
+            ? current.phone
+            : asNullableText(input.phone),
         whatsappPhone:
           input.whatsappPhone === undefined
             ? current.whatsappPhone
             : asNullableText(input.whatsappPhone),
         contactEmail:
-          input.contactEmail === undefined ? current.contactEmail : input.contactEmail ?? null,
-        mapUrl: input.mapUrl === undefined ? current.mapUrl : input.mapUrl ?? null,
+          input.contactEmail === undefined
+            ? current.contactEmail
+            : (input.contactEmail ?? null),
+        mapUrl:
+          input.mapUrl === undefined ? current.mapUrl : (input.mapUrl ?? null),
         businessHours:
           input.businessHours === undefined
             ? current.businessHours
-            : input.businessHours ?? null,
+            : (input.businessHours ?? null),
         isPrimary: input.isPrimary ?? current.isPrimary,
         isActive: input.isActive ?? current.isActive,
       })
@@ -177,7 +205,9 @@ export const removeLocation = deleteLocationProcedure
 export const listLeadRequests = readLeadProcedure
   .input(listLeadRequestsSchema)
   .handler(async ({ input, context }) => {
-    const conditions = [eq(leadRequests.organizationId, context.activeOrganizationId)];
+    const conditions = [
+      eq(leadRequests.organizationId, context.activeOrganizationId),
+    ];
 
     if (input.search) {
       conditions.push(like(leadRequests.name, `%${input.search}%`));
@@ -241,7 +271,9 @@ export const updateLeadRequest = updateLeadProcedure
 export const listReservationRequests = readReservationProcedure
   .input(listReservationRequestsSchema)
   .handler(async ({ input, context }) => {
-    const conditions = [eq(reservationRequests.organizationId, context.activeOrganizationId)];
+    const conditions = [
+      eq(reservationRequests.organizationId, context.activeOrganizationId),
+    ];
 
     if (input.search) {
       conditions.push(
@@ -307,7 +339,10 @@ export const updateReservationRequest = updateReservationProcedure
       .update(reservationRequests)
       .set({
         status: input.status ?? current.status,
-        notes: input.notes === undefined ? current.notes : asNullableText(input.notes),
+        notes:
+          input.notes === undefined
+            ? current.notes
+            : asNullableText(input.notes),
       })
       .where(eq(reservationRequests.id, current.id))
       .returning();
@@ -321,7 +356,13 @@ export const getPublicSite = publicProcedure
     const [site] = await db
       .select()
       .from(sites)
-      .where(and(eq(sites.slug, input.slug), eq(sites.isPublic, true)))
+      .where(
+        and(
+          eq(sites.slug, input.slug),
+          eq(sites.isPublic, true),
+          eq(sites.status, "published"),
+        ),
+      )
       .limit(1);
 
     if (!site) {
@@ -331,7 +372,9 @@ export const getPublicSite = publicProcedure
     const sections = await db
       .select()
       .from(siteSections)
-      .where(and(eq(siteSections.siteId, site.id), eq(siteSections.isVisible, true)))
+      .where(
+        and(eq(siteSections.siteId, site.id), eq(siteSections.isVisible, true)),
+      )
       .orderBy(asc(siteSections.sortOrder));
 
     const links = await db
@@ -391,7 +434,12 @@ export const getPublicCatalog = publicProcedure
     const categories = await db
       .select()
       .from(catalogCategories)
-      .where(and(eq(catalogCategories.catalogId, catalog.id), eq(catalogCategories.isVisible, true)))
+      .where(
+        and(
+          eq(catalogCategories.catalogId, catalog.id),
+          eq(catalogCategories.isVisible, true),
+        ),
+      )
       .orderBy(asc(catalogCategories.sortOrder));
 
     const items = await db
@@ -413,15 +461,37 @@ export const createLeadRequest = publicProcedure
   .input(createLeadRequestSchema)
   .handler(async ({ input }) => {
     let organizationId: string | null = null;
-    let siteId: string | null = input.siteId ?? null;
+    const siteId: string | null = input.siteId ?? null;
     let locationId: string | null = input.locationId ?? null;
 
     if (siteId) {
-      const [site] = await db.select().from(sites).where(eq(sites.id, siteId)).limit(1);
+      const [site] = await db
+        .select()
+        .from(sites)
+        .where(eq(sites.id, siteId))
+        .limit(1);
       if (!site || !site.isPublic) {
         notFound("No se encontró el sitio público indicado.");
       }
       organizationId = site.organizationId;
+
+      if (locationId) {
+        const [location] = await db
+          .select({
+            id: locations.id,
+            organizationId: locations.organizationId,
+          })
+          .from(locations)
+          .where(
+            and(eq(locations.id, locationId), eq(locations.isActive, true)),
+          )
+          .limit(1);
+
+        if (!location || location.organizationId !== site.organizationId) {
+          notFound("La sede indicada no corresponde al sitio seleccionado.");
+        }
+      }
+
       locationId = locationId ?? site.locationId ?? null;
     }
 
@@ -440,7 +510,8 @@ export const createLeadRequest = publicProcedure
     }
 
     const resolvedOrganizationId: string =
-      organizationId ?? notFound("No fue posible determinar la organización del lead.");
+      organizationId ??
+      notFound("No fue posible determinar la organización del lead.");
 
     const [created] = await db
       .insert(leadRequests)
@@ -468,7 +539,9 @@ export const createReservationRequest = publicProcedure
     const [location] = await db
       .select()
       .from(locations)
-      .where(and(eq(locations.id, input.locationId), eq(locations.isActive, true)))
+      .where(
+        and(eq(locations.id, input.locationId), eq(locations.isActive, true)),
+      )
       .limit(1);
 
     if (!location) {
@@ -479,7 +552,12 @@ export const createReservationRequest = publicProcedure
       const [site] = await db
         .select()
         .from(sites)
-        .where(and(eq(sites.id, input.siteId), eq(sites.organizationId, location.organizationId)))
+        .where(
+          and(
+            eq(sites.id, input.siteId),
+            eq(sites.organizationId, location.organizationId),
+          ),
+        )
         .limit(1);
 
       if (!site) {

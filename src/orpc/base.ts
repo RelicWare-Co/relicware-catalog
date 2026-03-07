@@ -138,7 +138,7 @@ export const badRequest = (message: string): never => {
 };
 
 export const conflict = (message: string): never => {
-  throw new ORPCError("BAD_REQUEST", { message });
+  throw new ORPCError("CONFLICT", { message });
 };
 
 export type ORPCAuthenticatedContext = {

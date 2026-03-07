@@ -2,10 +2,13 @@ import { and, asc, count, eq, inArray, like, ne } from "drizzle-orm";
 
 import { db } from "#/db";
 import {
-  catalogs,
+  brandThemes,
   catalogCategories,
   catalogItems,
   catalogItemVariants,
+  catalogs,
+  locations,
+  sites,
 } from "#/db/schema/main.schema";
 import { ensurePermission, notFound, withPermission } from "#/orpc/base";
 import {
@@ -34,7 +37,10 @@ async function getCatalogOrThrow(catalogId: string, organizationId: string) {
     .select()
     .from(catalogs)
     .where(
-      and(eq(catalogs.id, catalogId), eq(catalogs.organizationId, organizationId)),
+      and(
+        eq(catalogs.id, catalogId),
+        eq(catalogs.organizationId, organizationId),
+      ),
     )
     .limit(1);
 
@@ -43,6 +49,61 @@ async function getCatalogOrThrow(catalogId: string, organizationId: string) {
   }
 
   return catalog;
+}
+
+async function getSiteOrThrow(siteId: string, organizationId: string) {
+  const [site] = await db
+    .select({ id: sites.id })
+    .from(sites)
+    .where(and(eq(sites.id, siteId), eq(sites.organizationId, organizationId)))
+    .limit(1);
+
+  if (!site) {
+    notFound("No se encontró el sitio indicado para el catálogo.");
+  }
+
+  return site;
+}
+
+async function getLocationOrThrow(locationId: string, organizationId: string) {
+  const [location] = await db
+    .select({ id: locations.id })
+    .from(locations)
+    .where(
+      and(
+        eq(locations.id, locationId),
+        eq(locations.organizationId, organizationId),
+      ),
+    )
+    .limit(1);
+
+  if (!location) {
+    notFound("No se encontró la sede indicada para el catálogo.");
+  }
+
+  return location;
+}
+
+async function getBrandThemeOrThrow(
+  brandThemeId: string,
+  organizationId: string,
+) {
+  const [brandTheme] = await db
+    .select({ id: brandThemes.id })
+    .from(brandThemes)
+    .where(
+      and(
+        eq(brandThemes.id, brandThemeId),
+        eq(brandThemes.organizationId, organizationId),
+      ),
+    )
+    .limit(1);
+
+  if (!brandTheme) {
+    notFound("No se encontró el tema de marca indicado para el catálogo.");
+  }
+
+  return brandTheme;
 }
 
 async function ensureCatalogSlugAvailable(
@@ -131,7 +192,10 @@ async function getItemOrThrow(itemId: string, organizationId: string) {
     .from(catalogItems)
     .innerJoin(catalogs, eq(catalogs.id, catalogItems.catalogId))
     .where(
-      and(eq(catalogItems.id, itemId), eq(catalogs.organizationId, organizationId)),
+      and(
+        eq(catalogItems.id, itemId),
+        eq(catalogs.organizationId, organizationId),
+      ),
     )
     .limit(1);
 
@@ -160,7 +224,10 @@ async function getVariantOrThrow(variantId: string, organizationId: string) {
       updatedAt: catalogItemVariants.updatedAt,
     })
     .from(catalogItemVariants)
-    .innerJoin(catalogItems, eq(catalogItems.id, catalogItemVariants.catalogItemId))
+    .innerJoin(
+      catalogItems,
+      eq(catalogItems.id, catalogItemVariants.catalogItemId),
+    )
     .innerJoin(catalogs, eq(catalogs.id, catalogItems.catalogId))
     .where(
       and(
@@ -200,7 +267,10 @@ async function ensureCategorySlugAvailable(
   slug: string,
   excludeId?: string,
 ) {
-  const conditions = [eq(catalogCategories.catalogId, catalogId), eq(catalogCategories.slug, slug)];
+  const conditions = [
+    eq(catalogCategories.catalogId, catalogId),
+    eq(catalogCategories.slug, slug),
+  ];
 
   if (excludeId) {
     conditions.push(ne(catalogCategories.id, excludeId));
@@ -217,8 +287,15 @@ async function ensureCategorySlugAvailable(
   }
 }
 
-async function ensureItemSlugAvailable(catalogId: string, slug: string, excludeId?: string) {
-  const conditions = [eq(catalogItems.catalogId, catalogId), eq(catalogItems.slug, slug)];
+async function ensureItemSlugAvailable(
+  catalogId: string,
+  slug: string,
+  excludeId?: string,
+) {
+  const conditions = [
+    eq(catalogItems.catalogId, catalogId),
+    eq(catalogItems.slug, slug),
+  ];
 
   if (excludeId) {
     conditions.push(ne(catalogItems.id, excludeId));
@@ -258,7 +335,9 @@ const readCategoryProcedure = withPermission({ catalogCategory: ["read"] });
 const createCategoryProcedure = withPermission({ catalogCategory: ["create"] });
 const updateCategoryProcedure = withPermission({ catalogCategory: ["update"] });
 const deleteCategoryProcedure = withPermission({ catalogCategory: ["delete"] });
-const reorderCategoryProcedure = withPermission({ catalogCategory: ["reorder"] });
+const reorderCategoryProcedure = withPermission({
+  catalogCategory: ["reorder"],
+});
 
 const readItemProcedure = withPermission({ catalogItem: ["read"] });
 const createItemProcedure = withPermission({ catalogItem: ["create"] });
@@ -267,14 +346,22 @@ const deleteItemProcedure = withPermission({ catalogItem: ["delete"] });
 const reorderItemProcedure = withPermission({ catalogItem: ["reorder"] });
 
 const readVariantProcedure = withPermission({ catalogItemVariant: ["read"] });
-const createVariantProcedure = withPermission({ catalogItemVariant: ["create"] });
-const updateVariantProcedure = withPermission({ catalogItemVariant: ["update"] });
-const deleteVariantProcedure = withPermission({ catalogItemVariant: ["delete"] });
+const createVariantProcedure = withPermission({
+  catalogItemVariant: ["create"],
+});
+const updateVariantProcedure = withPermission({
+  catalogItemVariant: ["update"],
+});
+const deleteVariantProcedure = withPermission({
+  catalogItemVariant: ["delete"],
+});
 
 export const list = readCatalogProcedure
   .input(paginationSchema)
   .handler(async ({ input, context }) => {
-    const conditions = [eq(catalogs.organizationId, context.activeOrganizationId)];
+    const conditions = [
+      eq(catalogs.organizationId, context.activeOrganizationId),
+    ];
 
     if (input.search) {
       conditions.push(like(catalogs.name, `%${input.search}%`));
@@ -302,7 +389,10 @@ export const list = readCatalogProcedure
 export const getById = readCatalogProcedure
   .input(idInputSchema)
   .handler(async ({ input, context }) => {
-    const catalog = await getCatalogOrThrow(input.id, context.activeOrganizationId);
+    const catalog = await getCatalogOrThrow(
+      input.id,
+      context.activeOrganizationId,
+    );
     const categories = await db
       .select()
       .from(catalogCategories)
@@ -325,6 +415,21 @@ export const getById = readCatalogProcedure
 export const create = createCatalogProcedure
   .input(createCatalogSchema)
   .handler(async ({ input, context }) => {
+    if (input.siteId) {
+      await getSiteOrThrow(input.siteId, context.activeOrganizationId);
+    }
+
+    if (input.locationId) {
+      await getLocationOrThrow(input.locationId, context.activeOrganizationId);
+    }
+
+    if (input.brandThemeId) {
+      await getBrandThemeOrThrow(
+        input.brandThemeId,
+        context.activeOrganizationId,
+      );
+    }
+
     const slug = resolveSlug(input.slug, input.name);
     await ensureCatalogSlugAvailable(context.activeOrganizationId, slug);
 
@@ -357,24 +462,52 @@ export const create = createCatalogProcedure
 export const update = updateCatalogProcedure
   .input(updateCatalogSchema)
   .handler(async ({ input, context }) => {
-    const current = await getCatalogOrThrow(input.id, context.activeOrganizationId);
+    const current = await getCatalogOrThrow(
+      input.id,
+      context.activeOrganizationId,
+    );
+
+    if (input.siteId) {
+      await getSiteOrThrow(input.siteId, context.activeOrganizationId);
+    }
+
+    if (input.locationId) {
+      await getLocationOrThrow(input.locationId, context.activeOrganizationId);
+    }
+
+    if (input.brandThemeId) {
+      await getBrandThemeOrThrow(
+        input.brandThemeId,
+        context.activeOrganizationId,
+      );
+    }
+
     const slug = input.slug ? resolveSlug(input.slug, current.name) : undefined;
 
     if (slug) {
-      await ensureCatalogSlugAvailable(context.activeOrganizationId, slug, current.id);
+      await ensureCatalogSlugAvailable(
+        context.activeOrganizationId,
+        slug,
+        current.id,
+      );
     }
 
     try {
       const [updated] = await db
         .update(catalogs)
         .set({
-          siteId: input.siteId === undefined ? current.siteId : input.siteId ?? null,
+          siteId:
+            input.siteId === undefined
+              ? current.siteId
+              : (input.siteId ?? null),
           locationId:
-            input.locationId === undefined ? current.locationId : input.locationId ?? null,
+            input.locationId === undefined
+              ? current.locationId
+              : (input.locationId ?? null),
           brandThemeId:
             input.brandThemeId === undefined
               ? current.brandThemeId
-              : input.brandThemeId ?? null,
+              : (input.brandThemeId ?? null),
           name: input.name ?? current.name,
           slug: slug ?? current.slug,
           description:
@@ -388,9 +521,12 @@ export const update = updateCatalogProcedure
           coverImageUrl:
             input.coverImageUrl === undefined
               ? current.coverImageUrl
-              : input.coverImageUrl ?? null,
+              : (input.coverImageUrl ?? null),
           isPublic: input.isPublic ?? current.isPublic,
-          settings: input.settings === undefined ? current.settings : input.settings ?? null,
+          settings:
+            input.settings === undefined
+              ? current.settings
+              : (input.settings ?? null),
         })
         .where(eq(catalogs.id, current.id))
         .returning();
@@ -478,19 +614,29 @@ export const createCategory = createCategoryProcedure
 export const updateCategory = updateCategoryProcedure
   .input(updateCategorySchema)
   .handler(async ({ input, context }) => {
-    const current = await getCategoryOrThrow(input.id, context.activeOrganizationId);
-
+    const current = await getCategoryOrThrow(
+      input.id,
+      context.activeOrganizationId,
+    );
     const nextCatalogId = input.catalogId ?? current.catalogId;
+    await getCatalogOrThrow(nextCatalogId, context.activeOrganizationId);
 
-    if (input.parentCategoryId) {
+    const nextParentCategoryId =
+      input.parentCategoryId === undefined
+        ? current.parentCategoryId
+        : (input.parentCategoryId ?? null);
+
+    if (nextParentCategoryId) {
       await ensureCategoryBelongsToCatalog(
-        input.parentCategoryId,
+        nextParentCategoryId,
         nextCatalogId,
         context.activeOrganizationId,
       );
     }
 
-    const slug = input.slug ? resolveSlug(input.slug, input.name ?? current.name) : undefined;
+    const slug = input.slug
+      ? resolveSlug(input.slug, input.name ?? current.name)
+      : undefined;
 
     if (slug) {
       await ensureCategorySlugAvailable(nextCatalogId, slug, current.id);
@@ -503,7 +649,7 @@ export const updateCategory = updateCategoryProcedure
         parentCategoryId:
           input.parentCategoryId === undefined
             ? current.parentCategoryId
-            : input.parentCategoryId ?? null,
+            : (input.parentCategoryId ?? null),
         name: input.name ?? current.name,
         slug: slug ?? current.slug,
         description:
@@ -511,7 +657,9 @@ export const updateCategory = updateCategoryProcedure
             ? current.description
             : asNullableText(input.description),
         imageUrl:
-          input.imageUrl === undefined ? current.imageUrl : input.imageUrl ?? null,
+          input.imageUrl === undefined
+            ? current.imageUrl
+            : (input.imageUrl ?? null),
         sortOrder: input.sortOrder ?? current.sortOrder,
         isVisible: input.isVisible ?? current.isVisible,
       })
@@ -580,7 +728,10 @@ export const getItem = readItemProcedure
       .select()
       .from(catalogItemVariants)
       .where(eq(catalogItemVariants.catalogItemId, item.id))
-      .orderBy(asc(catalogItemVariants.sortOrder), asc(catalogItemVariants.name));
+      .orderBy(
+        asc(catalogItemVariants.sortOrder),
+        asc(catalogItemVariants.name),
+      );
 
     return {
       item,
@@ -600,10 +751,13 @@ export const createItem = createItemProcedure
 
     ensurePermission(context.roles, {
       catalogItem: ["create"],
-      ...(input.basePriceAmount !== undefined || input.compareAtPriceAmount !== undefined
+      ...(input.basePriceAmount !== undefined ||
+      input.compareAtPriceAmount !== undefined
         ? { catalogItem: ["create", "pricing"] }
         : {}),
-      ...(input.inventoryQuantity !== undefined ? { catalogItem: ["create", "inventory"] } : {}),
+      ...(input.inventoryQuantity !== undefined
+        ? { catalogItem: ["create", "inventory"] }
+        : {}),
     });
 
     const slug = resolveSlug(input.slug, input.name);
@@ -644,7 +798,10 @@ export const createItem = createItemProcedure
 export const updateItem = updateItemProcedure
   .input(updateItemSchema)
   .handler(async ({ input, context }) => {
-    const current = await getItemOrThrow(input.id, context.activeOrganizationId);
+    const current = await getItemOrThrow(
+      input.id,
+      context.activeOrganizationId,
+    );
     const nextCatalogId = input.catalogId ?? current.catalogId;
 
     await getCatalogOrThrow(nextCatalogId, context.activeOrganizationId);
@@ -654,7 +811,10 @@ export const updateItem = updateItemProcedure
       context.activeOrganizationId,
     );
 
-    if (input.basePriceAmount !== undefined || input.compareAtPriceAmount !== undefined) {
+    if (
+      input.basePriceAmount !== undefined ||
+      input.compareAtPriceAmount !== undefined
+    ) {
       ensurePermission(context.roles, { catalogItem: ["pricing"] });
     }
 
@@ -662,7 +822,9 @@ export const updateItem = updateItemProcedure
       ensurePermission(context.roles, { catalogItem: ["inventory"] });
     }
 
-    const slug = input.slug ? resolveSlug(input.slug, input.name ?? current.name) : undefined;
+    const slug = input.slug
+      ? resolveSlug(input.slug, input.name ?? current.name)
+      : undefined;
 
     if (slug) {
       await ensureItemSlugAvailable(nextCatalogId, slug, current.id);
@@ -673,7 +835,9 @@ export const updateItem = updateItemProcedure
       .set({
         catalogId: nextCatalogId,
         categoryId:
-          input.categoryId === undefined ? current.categoryId : input.categoryId ?? null,
+          input.categoryId === undefined
+            ? current.categoryId
+            : (input.categoryId ?? null),
         name: input.name ?? current.name,
         slug: slug ?? current.slug,
         sku: input.sku === undefined ? current.sku : asNullableText(input.sku),
@@ -686,26 +850,32 @@ export const updateItem = updateItemProcedure
             ? current.description
             : asNullableText(input.description),
         imageUrl:
-          input.imageUrl === undefined ? current.imageUrl : input.imageUrl ?? null,
-        gallery: input.gallery === undefined ? current.gallery : asNullableArray(input.gallery),
+          input.imageUrl === undefined
+            ? current.imageUrl
+            : (input.imageUrl ?? null),
+        gallery:
+          input.gallery === undefined
+            ? current.gallery
+            : asNullableArray(input.gallery),
         status: input.status ?? current.status,
         basePriceAmount:
           input.basePriceAmount === undefined
             ? current.basePriceAmount
-            : input.basePriceAmount ?? null,
+            : (input.basePriceAmount ?? null),
         compareAtPriceAmount:
           input.compareAtPriceAmount === undefined
             ? current.compareAtPriceAmount
-            : input.compareAtPriceAmount ?? null,
+            : (input.compareAtPriceAmount ?? null),
         inventoryQuantity:
           input.inventoryQuantity === undefined
             ? current.inventoryQuantity
-            : input.inventoryQuantity ?? null,
+            : (input.inventoryQuantity ?? null),
         hasVariants: input.hasVariants ?? current.hasVariants,
         trackInventory: input.trackInventory ?? current.trackInventory,
         isFeatured: input.isFeatured ?? current.isFeatured,
         isAvailable: input.isAvailable ?? current.isAvailable,
-        tags: input.tags === undefined ? current.tags : asNullableArray(input.tags),
+        tags:
+          input.tags === undefined ? current.tags : asNullableArray(input.tags),
         sortOrder: input.sortOrder ?? current.sortOrder,
       })
       .where(eq(catalogItems.id, current.id))
@@ -733,10 +903,7 @@ export const reorderItems = reorderItemProcedure
     }
 
     await reorderWithOffset(input.ids, (id, sortOrder) =>
-      db
-        .update(catalogItems)
-        .set({ sortOrder })
-        .where(eq(catalogItems.id, id)),
+      db.update(catalogItems).set({ sortOrder }).where(eq(catalogItems.id, id)),
     );
 
     return { success: true };
@@ -762,7 +929,10 @@ export const listVariants = readVariantProcedure
       .select()
       .from(catalogItemVariants)
       .where(eq(catalogItemVariants.catalogItemId, input.id))
-      .orderBy(asc(catalogItemVariants.sortOrder), asc(catalogItemVariants.name));
+      .orderBy(
+        asc(catalogItemVariants.sortOrder),
+        asc(catalogItemVariants.name),
+      );
   });
 
 export const createVariant = createVariantProcedure
@@ -770,7 +940,10 @@ export const createVariant = createVariantProcedure
   .handler(async ({ input, context }) => {
     await getItemOrThrow(input.catalogItemId, context.activeOrganizationId);
 
-    if (input.priceAmount !== undefined || input.compareAtPriceAmount !== undefined) {
+    if (
+      input.priceAmount !== undefined ||
+      input.compareAtPriceAmount !== undefined
+    ) {
       ensurePermission(context.roles, { catalogItemVariant: ["pricing"] });
     }
 
@@ -800,9 +973,19 @@ export const createVariant = createVariantProcedure
 export const updateVariant = updateVariantProcedure
   .input(updateVariantSchema)
   .handler(async ({ input, context }) => {
-    const current = await getVariantOrThrow(input.id, context.activeOrganizationId);
+    const current = await getVariantOrThrow(
+      input.id,
+      context.activeOrganizationId,
+    );
 
-    if (input.priceAmount !== undefined || input.compareAtPriceAmount !== undefined) {
+    if (input.catalogItemId) {
+      await getItemOrThrow(input.catalogItemId, context.activeOrganizationId);
+    }
+
+    if (
+      input.priceAmount !== undefined ||
+      input.compareAtPriceAmount !== undefined
+    ) {
       ensurePermission(context.roles, { catalogItemVariant: ["pricing"] });
     }
 
@@ -817,17 +1000,21 @@ export const updateVariant = updateVariantProcedure
         name: input.name ?? current.name,
         sku: input.sku === undefined ? current.sku : asNullableText(input.sku),
         optionValues:
-          input.optionValues === undefined ? current.optionValues : input.optionValues ?? null,
+          input.optionValues === undefined
+            ? current.optionValues
+            : (input.optionValues ?? null),
         priceAmount:
-          input.priceAmount === undefined ? current.priceAmount : input.priceAmount ?? null,
+          input.priceAmount === undefined
+            ? current.priceAmount
+            : (input.priceAmount ?? null),
         compareAtPriceAmount:
           input.compareAtPriceAmount === undefined
             ? current.compareAtPriceAmount
-            : input.compareAtPriceAmount ?? null,
+            : (input.compareAtPriceAmount ?? null),
         inventoryQuantity:
           input.inventoryQuantity === undefined
             ? current.inventoryQuantity
-            : input.inventoryQuantity ?? null,
+            : (input.inventoryQuantity ?? null),
         isDefault: input.isDefault ?? current.isDefault,
         isAvailable: input.isAvailable ?? current.isAvailable,
         sortOrder: input.sortOrder ?? current.sortOrder,

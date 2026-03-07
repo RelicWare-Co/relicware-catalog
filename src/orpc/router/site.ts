@@ -23,7 +23,11 @@ import {
   updateSiteSchema,
   updateSiteSectionSchema,
 } from "#/orpc/schema";
-import { asNullableText, resolveSlug, rethrowAsBusinessError } from "#/orpc/utils";
+import {
+  asNullableText,
+  resolveSlug,
+  rethrowAsBusinessError,
+} from "#/orpc/utils";
 
 async function getSiteOrThrow(siteId: string, organizationId: string) {
   const [site] = await db
@@ -44,7 +48,10 @@ async function getThemeOrThrow(themeId: string, organizationId: string) {
     .select()
     .from(brandThemes)
     .where(
-      and(eq(brandThemes.id, themeId), eq(brandThemes.organizationId, organizationId)),
+      and(
+        eq(brandThemes.id, themeId),
+        eq(brandThemes.organizationId, organizationId),
+      ),
     )
     .limit(1);
 
@@ -60,7 +67,10 @@ async function getLocationOrThrow(locationId: string, organizationId: string) {
     .select()
     .from(locations)
     .where(
-      and(eq(locations.id, locationId), eq(locations.organizationId, organizationId)),
+      and(
+        eq(locations.id, locationId),
+        eq(locations.organizationId, organizationId),
+      ),
     )
     .limit(1);
 
@@ -88,7 +98,12 @@ async function getSectionOrThrow(sectionId: string, organizationId: string) {
     })
     .from(siteSections)
     .innerJoin(sites, eq(sites.id, siteSections.siteId))
-    .where(and(eq(siteSections.id, sectionId), eq(sites.organizationId, organizationId)))
+    .where(
+      and(
+        eq(siteSections.id, sectionId),
+        eq(sites.organizationId, organizationId),
+      ),
+    )
     .limit(1);
 
   if (!section) {
@@ -118,7 +133,9 @@ async function getLinkOrThrow(linkId: string, organizationId: string) {
     .from(siteLinks)
     .innerJoin(siteSections, eq(siteSections.id, siteLinks.siteSectionId))
     .innerJoin(sites, eq(sites.id, siteSections.siteId))
-    .where(and(eq(siteLinks.id, linkId), eq(sites.organizationId, organizationId)))
+    .where(
+      and(eq(siteLinks.id, linkId), eq(sites.organizationId, organizationId)),
+    )
     .limit(1);
 
   if (!link) {
@@ -128,11 +145,7 @@ async function getLinkOrThrow(linkId: string, organizationId: string) {
   return link;
 }
 
-async function ensureSiteSlugAvailable(
-  organizationId: string,
-  slug: string,
-  excludeId?: string,
-) {
+async function ensureSiteSlugAvailable(slug: string, excludeId?: string) {
   const conditions = [eq(sites.slug, slug)];
 
   if (excludeId) {
@@ -140,12 +153,12 @@ async function ensureSiteSlugAvailable(
   }
 
   const [existing] = await db
-    .select({ id: sites.id, organizationId: sites.organizationId })
+    .select({ id: sites.id })
     .from(sites)
     .where(and(...conditions))
     .limit(1);
 
-  if (existing && existing.organizationId === organizationId) {
+  if (existing) {
     throw new Error("slug-conflict");
   }
 }
@@ -214,7 +227,9 @@ const reorderLinkProcedure = withPermission({ siteLink: ["reorder"] });
 export const listThemes = readBrandProcedure
   .input(paginationSchema)
   .handler(async ({ input, context }) => {
-    const conditions = [eq(brandThemes.organizationId, context.activeOrganizationId)];
+    const conditions = [
+      eq(brandThemes.organizationId, context.activeOrganizationId),
+    ];
 
     if (input.search) {
       conditions.push(like(brandThemes.name, `%${input.search}%`));
@@ -274,10 +289,17 @@ export const createTheme = createBrandProcedure
 export const updateTheme = updateBrandProcedure
   .input(updateBrandThemeSchema)
   .handler(async ({ input, context }) => {
-    const current = await getThemeOrThrow(input.id, context.activeOrganizationId);
+    const current = await getThemeOrThrow(
+      input.id,
+      context.activeOrganizationId,
+    );
 
     if (input.name) {
-      await ensureThemeNameAvailable(context.activeOrganizationId, input.name, current.id);
+      await ensureThemeNameAvailable(
+        context.activeOrganizationId,
+        input.name,
+        current.id,
+      );
     }
 
     const [updated] = await db
@@ -289,30 +311,36 @@ export const updateTheme = updateBrandProcedure
         secondaryColor:
           input.secondaryColor === undefined
             ? current.secondaryColor
-            : input.secondaryColor ?? null,
+            : (input.secondaryColor ?? null),
         accentColor:
-          input.accentColor === undefined ? current.accentColor : input.accentColor ?? null,
+          input.accentColor === undefined
+            ? current.accentColor
+            : (input.accentColor ?? null),
         backgroundColor: input.backgroundColor ?? current.backgroundColor,
         surfaceColor:
-          input.surfaceColor === undefined ? current.surfaceColor : input.surfaceColor ?? null,
+          input.surfaceColor === undefined
+            ? current.surfaceColor
+            : (input.surfaceColor ?? null),
         textColor: input.textColor ?? current.textColor,
         mutedTextColor:
           input.mutedTextColor === undefined
             ? current.mutedTextColor
-            : input.mutedTextColor ?? null,
+            : (input.mutedTextColor ?? null),
         fontHeading:
           input.fontHeading === undefined
             ? current.fontHeading
             : asNullableText(input.fontHeading),
         fontBody:
-          input.fontBody === undefined ? current.fontBody : asNullableText(input.fontBody),
+          input.fontBody === undefined
+            ? current.fontBody
+            : asNullableText(input.fontBody),
         borderRadius: input.borderRadius ?? current.borderRadius,
         buttonStyle: input.buttonStyle ?? current.buttonStyle,
         cardStyle: input.cardStyle ?? current.cardStyle,
         styleOverrides:
           input.styleOverrides === undefined
             ? current.styleOverrides
-            : input.styleOverrides ?? null,
+            : (input.styleOverrides ?? null),
         isDefault: input.isDefault ?? current.isDefault,
       })
       .where(eq(brandThemes.id, current.id))
@@ -394,7 +422,7 @@ export const create = createSiteProcedure
     }
 
     const slug = resolveSlug(input.slug, input.name);
-    await ensureSiteSlugAvailable(context.activeOrganizationId, slug);
+    await ensureSiteSlugAvailable(slug);
 
     try {
       const [created] = await db
@@ -428,14 +456,20 @@ export const create = createSiteProcedure
 
       return created;
     } catch (error) {
-      rethrowAsBusinessError(error, "No se pudo crear el sitio. Revisa slug o dominios.");
+      rethrowAsBusinessError(
+        error,
+        "No se pudo crear el sitio. Revisa slug o dominios.",
+      );
     }
   });
 
 export const update = updateSiteProcedure
   .input(updateSiteSchema)
   .handler(async ({ input, context }) => {
-    const current = await getSiteOrThrow(input.id, context.activeOrganizationId);
+    const current = await getSiteOrThrow(
+      input.id,
+      context.activeOrganizationId,
+    );
 
     if (input.locationId) {
       await getLocationOrThrow(input.locationId, context.activeOrganizationId);
@@ -445,85 +479,114 @@ export const update = updateSiteProcedure
       await getThemeOrThrow(input.brandThemeId, context.activeOrganizationId);
     }
 
-    const slug = input.slug ? resolveSlug(input.slug, input.name ?? current.name) : undefined;
+    const slug = input.slug
+      ? resolveSlug(input.slug, input.name ?? current.name)
+      : undefined;
 
     if (slug) {
-      await ensureSiteSlugAvailable(context.activeOrganizationId, slug, current.id);
+      await ensureSiteSlugAvailable(slug, current.id);
     }
 
-    const [updated] = await db
-      .update(sites)
-      .set({
-        locationId: input.locationId === undefined ? current.locationId : input.locationId ?? null,
-        brandThemeId:
-          input.brandThemeId === undefined
-            ? current.brandThemeId
-            : input.brandThemeId ?? null,
-        name: input.name ?? current.name,
-        slug: slug ?? current.slug,
-        type: input.type ?? current.type,
-        status: input.status ?? current.status,
-        subdomain:
-          input.subdomain === undefined ? current.subdomain : asNullableText(input.subdomain),
-        customDomain:
-          input.customDomain === undefined
-            ? current.customDomain
-            : asNullableText(input.customDomain),
-        headline:
-          input.headline === undefined ? current.headline : asNullableText(input.headline),
-        subheadline:
-          input.subheadline === undefined
-            ? current.subheadline
-            : asNullableText(input.subheadline),
-        description:
-          input.description === undefined
-            ? current.description
-            : asNullableText(input.description),
-        logoUrl: input.logoUrl === undefined ? current.logoUrl : input.logoUrl ?? null,
-        heroImageUrl:
-          input.heroImageUrl === undefined
-            ? current.heroImageUrl
-            : input.heroImageUrl ?? null,
-        coverImageUrl:
-          input.coverImageUrl === undefined
-            ? current.coverImageUrl
-            : input.coverImageUrl ?? null,
-        primaryCtaLabel:
-          input.primaryCtaLabel === undefined
-            ? current.primaryCtaLabel
-            : asNullableText(input.primaryCtaLabel),
-        primaryCtaUrl:
-          input.primaryCtaUrl === undefined
-            ? current.primaryCtaUrl
-            : input.primaryCtaUrl ?? null,
-        seoTitle:
-          input.seoTitle === undefined ? current.seoTitle : asNullableText(input.seoTitle),
-        seoDescription:
-          input.seoDescription === undefined
-            ? current.seoDescription
-            : asNullableText(input.seoDescription),
-        socialLinks:
-          input.socialLinks === undefined ? current.socialLinks : input.socialLinks ?? null,
-        settings: input.settings === undefined ? current.settings : input.settings ?? null,
-        isPublic: input.isPublic ?? current.isPublic,
-      })
-      .where(eq(sites.id, current.id))
-      .returning();
+    try {
+      const [updated] = await db
+        .update(sites)
+        .set({
+          locationId:
+            input.locationId === undefined
+              ? current.locationId
+              : (input.locationId ?? null),
+          brandThemeId:
+            input.brandThemeId === undefined
+              ? current.brandThemeId
+              : (input.brandThemeId ?? null),
+          name: input.name ?? current.name,
+          slug: slug ?? current.slug,
+          type: input.type ?? current.type,
+          status: input.status ?? current.status,
+          subdomain:
+            input.subdomain === undefined
+              ? current.subdomain
+              : asNullableText(input.subdomain),
+          customDomain:
+            input.customDomain === undefined
+              ? current.customDomain
+              : asNullableText(input.customDomain),
+          headline:
+            input.headline === undefined
+              ? current.headline
+              : asNullableText(input.headline),
+          subheadline:
+            input.subheadline === undefined
+              ? current.subheadline
+              : asNullableText(input.subheadline),
+          description:
+            input.description === undefined
+              ? current.description
+              : asNullableText(input.description),
+          logoUrl:
+            input.logoUrl === undefined
+              ? current.logoUrl
+              : (input.logoUrl ?? null),
+          heroImageUrl:
+            input.heroImageUrl === undefined
+              ? current.heroImageUrl
+              : (input.heroImageUrl ?? null),
+          coverImageUrl:
+            input.coverImageUrl === undefined
+              ? current.coverImageUrl
+              : (input.coverImageUrl ?? null),
+          primaryCtaLabel:
+            input.primaryCtaLabel === undefined
+              ? current.primaryCtaLabel
+              : asNullableText(input.primaryCtaLabel),
+          primaryCtaUrl:
+            input.primaryCtaUrl === undefined
+              ? current.primaryCtaUrl
+              : (input.primaryCtaUrl ?? null),
+          seoTitle:
+            input.seoTitle === undefined
+              ? current.seoTitle
+              : asNullableText(input.seoTitle),
+          seoDescription:
+            input.seoDescription === undefined
+              ? current.seoDescription
+              : asNullableText(input.seoDescription),
+          socialLinks:
+            input.socialLinks === undefined
+              ? current.socialLinks
+              : (input.socialLinks ?? null),
+          settings:
+            input.settings === undefined
+              ? current.settings
+              : (input.settings ?? null),
+          isPublic: input.isPublic ?? current.isPublic,
+        })
+        .where(eq(sites.id, current.id))
+        .returning();
 
-    return updated;
+      return updated;
+    } catch (error) {
+      rethrowAsBusinessError(
+        error,
+        "No se pudo actualizar el sitio. Revisa slug o dominios.",
+      );
+    }
   });
 
 export const setStatus = publishSiteProcedure
   .input(siteStatusSchema)
   .handler(async ({ input, context }) => {
-    const current = await getSiteOrThrow(input.id, context.activeOrganizationId);
+    const current = await getSiteOrThrow(
+      input.id,
+      context.activeOrganizationId,
+    );
     const [updated] = await db
       .update(sites)
       .set({
         status: input.status,
         publishedAt:
           input.status === "published"
-            ? current.publishedAt ?? new Date()
+            ? (current.publishedAt ?? new Date())
             : input.status === "draft"
               ? null
               : current.publishedAt,
@@ -538,7 +601,10 @@ export const remove = deleteSiteProcedure
   .input(idInputSchema)
   .handler(async ({ input, context }) => {
     await getSiteOrThrow(input.id, context.activeOrganizationId);
-    const [deleted] = await db.delete(sites).where(eq(sites.id, input.id)).returning();
+    const [deleted] = await db
+      .delete(sites)
+      .where(eq(sites.id, input.id))
+      .returning();
     return deleted;
   });
 
@@ -577,7 +643,10 @@ export const createSection = createSectionProcedure
 export const updateSection = updateSectionProcedure
   .input(updateSiteSectionSchema)
   .handler(async ({ input, context }) => {
-    const current = await getSectionOrThrow(input.id, context.activeOrganizationId);
+    const current = await getSectionOrThrow(
+      input.id,
+      context.activeOrganizationId,
+    );
 
     if (input.siteId) {
       await getSiteOrThrow(input.siteId, context.activeOrganizationId);
@@ -588,11 +657,20 @@ export const updateSection = updateSectionProcedure
       .set({
         siteId: input.siteId ?? current.siteId,
         type: input.type ?? current.type,
-        title: input.title === undefined ? current.title : asNullableText(input.title),
+        title:
+          input.title === undefined
+            ? current.title
+            : asNullableText(input.title),
         subtitle:
-          input.subtitle === undefined ? current.subtitle : asNullableText(input.subtitle),
-        body: input.body === undefined ? current.body : asNullableText(input.body),
-        content: input.content === undefined ? current.content : input.content ?? null,
+          input.subtitle === undefined
+            ? current.subtitle
+            : asNullableText(input.subtitle),
+        body:
+          input.body === undefined ? current.body : asNullableText(input.body),
+        content:
+          input.content === undefined
+            ? current.content
+            : (input.content ?? null),
         sortOrder: input.sortOrder ?? current.sortOrder,
         isVisible: input.isVisible ?? current.isVisible,
       })
@@ -676,10 +754,16 @@ export const createLink = createLinkProcedure
 export const updateLink = updateLinkProcedure
   .input(updateSiteLinkSchema)
   .handler(async ({ input, context }) => {
-    const current = await getLinkOrThrow(input.id, context.activeOrganizationId);
+    const current = await getLinkOrThrow(
+      input.id,
+      context.activeOrganizationId,
+    );
 
     if (input.siteSectionId) {
-      await getSectionOrThrow(input.siteSectionId, context.activeOrganizationId);
+      await getSectionOrThrow(
+        input.siteSectionId,
+        context.activeOrganizationId,
+      );
     }
 
     const [updated] = await db
@@ -689,11 +773,12 @@ export const updateLink = updateLinkProcedure
         label: input.label ?? current.label,
         url: input.url ?? current.url,
         type: input.type ?? current.type,
-        icon: input.icon === undefined ? current.icon : asNullableText(input.icon),
+        icon:
+          input.icon === undefined ? current.icon : asNullableText(input.icon),
         thumbnailUrl:
           input.thumbnailUrl === undefined
             ? current.thumbnailUrl
-            : input.thumbnailUrl ?? null,
+            : (input.thumbnailUrl ?? null),
         analyticsKey:
           input.analyticsKey === undefined
             ? current.analyticsKey
@@ -738,7 +823,10 @@ export const removeLink = deleteLinkProcedure
   .input(idInputSchema)
   .handler(async ({ input, context }) => {
     await getLinkOrThrow(input.id, context.activeOrganizationId);
-    const [deleted] = await db.delete(siteLinks).where(eq(siteLinks.id, input.id)).returning();
+    const [deleted] = await db
+      .delete(siteLinks)
+      .where(eq(siteLinks.id, input.id))
+      .returning();
     return deleted;
   });
 
