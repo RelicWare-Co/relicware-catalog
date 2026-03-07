@@ -1,6 +1,12 @@
-import { addTodo, listTodos } from "./todos";
+import catalog from "./catalog";
+import operations from "./operations";
+import organization from "./organization";
+import site from "./site";
 
 export default {
-  listTodos,
-  addTodo,
+  organization,
+  catalog,
+  site,
+  operations,
 };
+

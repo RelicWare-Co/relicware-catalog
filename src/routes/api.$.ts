@@ -5,7 +5,6 @@ import { onError } from "@orpc/server";
 import { ZodToJsonSchemaConverter } from "@orpc/zod/zod4";
 import { createFileRoute } from "@tanstack/react-router";
 import router from "#/orpc/router";
-import { TodoSchema } from "#/orpc/schema";
 
 const handler = new OpenAPIHandler(router, {
   interceptors: [
@@ -21,11 +20,10 @@ const handler = new OpenAPIHandler(router, {
       schemaConverters: [new ZodToJsonSchemaConverter()],
       specGenerateOptions: {
         info: {
-          title: "TanStack ORPC Playground",
+          title: "Relicware Catalog API",
           version: "1.0.0",
         },
         commonSchemas: {
-          Todo: { schema: TodoSchema },
           UndefinedError: { error: "UndefinedError" },
         },
         security: [{ bearerAuth: [] }],
@@ -54,7 +52,9 @@ const handler = new OpenAPIHandler(router, {
 async function handle({ request }: { request: Request }) {
   const { response } = await handler.handle(request, {
     prefix: "/api",
-    context: {},
+    context: {
+      headers: request.headers,
+    },
   });
 
   return response ?? new Response("Not Found", { status: 404 });
