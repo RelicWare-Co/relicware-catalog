@@ -2,18 +2,26 @@ import {
   AppShell,
   Avatar,
   Badge,
+  Box,
   Burger,
+  Button,
+  Card,
   Group,
   Menu,
+  Modal,
   NavLink,
   rem,
+  SimpleGrid,
+  Stack,
   Text,
+  ThemeIcon,
   UnstyledButton,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { Link, Outlet, useLocation } from "@tanstack/react-router";
 import {
   BookOpen,
+  Check,
   LayoutDashboard,
   LogOut,
   Receipt,
@@ -25,6 +33,8 @@ import type React from "react";
 
 export function DashboardLayout({ children }: { children?: React.ReactNode }) {
   const [opened, { toggle }] = useDisclosure();
+  const [plansModalOpened, { open: openPlans, close: closePlans }] =
+    useDisclosure();
   // We use useLocation directly from tanstack router
   const location = useLocation();
 
@@ -233,19 +243,197 @@ export function DashboardLayout({ children }: { children?: React.ReactNode }) {
             <Text fz="xs" c="brand.6" mb={12}>
               15 / 50 Productos usados
             </Text>
-            <Text
-              fz="xs"
-              c="brand.7"
-              fw={600}
-              style={{ cursor: "pointer", textDecoration: "underline" }}
-            >
-              Mejorar plan
-            </Text>
+            <UnstyledButton onClick={openPlans}>
+              <Text
+                fz="xs"
+                c="brand.7"
+                fw={600}
+                style={{ cursor: "pointer", textDecoration: "underline" }}
+              >
+                Mejorar plan
+              </Text>
+            </UnstyledButton>
           </div>
         </AppShell.Section>
       </AppShell.Navbar>
 
-      <AppShell.Main>{children || <Outlet />}</AppShell.Main>
+      <AppShell.Main>
+        <Modal
+          opened={plansModalOpened}
+          onClose={closePlans}
+          size="lg"
+          radius="xl"
+          padding="xl"
+          centered
+          title={
+            <Text fw={800} fz="xl" style={{ letterSpacing: "-0.02em" }}>
+              Desbloquea todo el potencial
+            </Text>
+          }
+          overlayProps={{
+            backgroundOpacity: 0.5,
+            blur: 4,
+          }}
+        >
+          <Text c="dimmed" mb="xl">
+            Elige el plan que mejor se adapte al crecimiento de tu negocio.
+          </Text>
+
+          <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="lg">
+            {/* Plan Emprendedor */}
+            <Card
+              withBorder
+              radius="xl"
+              p="xl"
+              style={{
+                borderColor: "var(--mantine-color-gray-3)",
+                display: "flex",
+                flexDirection: "column",
+              }}
+            >
+              <Box mb="xl">
+                <Text fw={700} fz="lg" mb={4}>
+                  Emprendedor
+                </Text>
+                <Group align="flex-end" gap="xs">
+                  <Text fw={900} fz={32} style={{ letterSpacing: "-0.04em" }}>
+                    Gratis
+                  </Text>
+                </Group>
+                <Text c="dimmed" fz="sm" mt="sm">
+                  Ideal para empezar y probar la plataforma.
+                </Text>
+              </Box>
+
+              <Stack gap="sm" style={{ flex: 1 }}>
+                {[
+                  "Hasta 50 productos",
+                  "1 Catálogo",
+                  "Atención por WhatsApp",
+                ].map((feature) => (
+                  <Group
+                    key={feature}
+                    gap="sm"
+                    wrap="nowrap"
+                    align="flex-start"
+                  >
+                    <ThemeIcon
+                      size="sm"
+                      radius="xl"
+                      color="gray.4"
+                      variant="light"
+                      mt={2}
+                    >
+                      <Check size={12} strokeWidth={3} />
+                    </ThemeIcon>
+                    <Text fz="sm" c="dark.7">
+                      {feature}
+                    </Text>
+                  </Group>
+                ))}
+              </Stack>
+
+              <Button
+                mt="xl"
+                variant="light"
+                color="gray"
+                radius="xl"
+                fullWidth
+                disabled
+              >
+                Plan actual
+              </Button>
+            </Card>
+
+            {/* Plan Pro */}
+            <Card
+              withBorder
+              radius="xl"
+              p="xl"
+              style={{
+                borderColor: "var(--mantine-color-brand-3)",
+                backgroundColor: "var(--mantine-color-brand-0)",
+                boxShadow: "0 8px 30px rgba(var(--mantine-color-brand-2), 0.5)",
+                display: "flex",
+                flexDirection: "column",
+                position: "relative",
+              }}
+            >
+              <Badge
+                color="brand.6"
+                variant="filled"
+                radius="sm"
+                style={{
+                  position: "absolute",
+                  top: 16,
+                  right: 16,
+                  fontWeight: 800,
+                }}
+              >
+                RECOMENDADO
+              </Badge>
+
+              <Box mb="xl">
+                <Text fw={800} fz="lg" c="brand.8" mb={4}>
+                  Profesional
+                </Text>
+                <Group align="flex-end" gap="xs">
+                  <Text fw={900} fz={32} style={{ letterSpacing: "-0.04em" }}>
+                    $39.900
+                  </Text>
+                  <Text c="dimmed" fz="sm" mb={6}>
+                    / mes
+                  </Text>
+                </Group>
+                <Text c="brand.7" fz="sm" mt="sm">
+                  Todo lo que necesitas para vender como un profesional.
+                </Text>
+              </Box>
+
+              <Stack gap="sm" style={{ flex: 1 }}>
+                {[
+                  "Productos ilimitados",
+                  "Catálogos ilimitados",
+                  "Recibe pedidos web",
+                  "Dominio personalizado",
+                  "Sin comisiones por venta",
+                ].map((feature) => (
+                  <Group
+                    key={feature}
+                    gap="sm"
+                    wrap="nowrap"
+                    align="flex-start"
+                  >
+                    <ThemeIcon size="sm" radius="xl" color="brand.6" mt={2}>
+                      <Check size={12} strokeWidth={3} />
+                    </ThemeIcon>
+                    <Text fz="sm" c="dark.8" fw={500}>
+                      {feature}
+                    </Text>
+                  </Group>
+                ))}
+              </Stack>
+
+              <Button
+                mt="xl"
+                variant="filled"
+                color="brand.6"
+                radius="xl"
+                fullWidth
+                style={{
+                  fontWeight: 800,
+                  boxShadow:
+                    "0 4px 14px rgba(var(--mantine-color-brand-6), 0.4)",
+                }}
+              >
+                Actualizar a Pro
+              </Button>
+            </Card>
+          </SimpleGrid>
+        </Modal>
+
+        {children || <Outlet />}
+      </AppShell.Main>
     </AppShell>
   );
 }
