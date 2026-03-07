@@ -19,6 +19,7 @@ import { Route as DashboardProductsRouteImport } from './routes/dashboard/produc
 import { Route as DashboardOrganizationsRouteImport } from './routes/dashboard/organizations'
 import { Route as DashboardCatalogsRouteImport } from './routes/dashboard/catalogs'
 import { Route as ApiSplatRouteImport } from './routes/api.$'
+import { Route as COrganizationSlugCatalogSlugRouteImport } from './routes/c.$organizationSlug.$catalogSlug'
 import { Route as ApiRpcSplatRouteImport } from './routes/api.rpc.$'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
@@ -72,6 +73,12 @@ const ApiSplatRoute = ApiSplatRouteImport.update({
   path: '/api/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const COrganizationSlugCatalogSlugRoute =
+  COrganizationSlugCatalogSlugRouteImport.update({
+    id: '/c/$organizationSlug/$catalogSlug',
+    path: '/c/$organizationSlug/$catalogSlug',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiRpcSplatRoute = ApiRpcSplatRouteImport.update({
   id: '/api/rpc/$',
   path: '/api/rpc/$',
@@ -96,6 +103,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/': typeof DashboardIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/rpc/$': typeof ApiRpcSplatRoute
+  '/c/$organizationSlug/$catalogSlug': typeof COrganizationSlugCatalogSlugRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -109,6 +117,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof DashboardIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/rpc/$': typeof ApiRpcSplatRoute
+  '/c/$organizationSlug/$catalogSlug': typeof COrganizationSlugCatalogSlugRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -124,6 +133,7 @@ export interface FileRoutesById {
   '/dashboard/': typeof DashboardIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/rpc/$': typeof ApiRpcSplatRoute
+  '/c/$organizationSlug/$catalogSlug': typeof COrganizationSlugCatalogSlugRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -140,6 +150,7 @@ export interface FileRouteTypes {
     | '/dashboard/'
     | '/api/auth/$'
     | '/api/rpc/$'
+    | '/c/$organizationSlug/$catalogSlug'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -153,6 +164,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/api/auth/$'
     | '/api/rpc/$'
+    | '/c/$organizationSlug/$catalogSlug'
   id:
     | '__root__'
     | '/'
@@ -167,6 +179,7 @@ export interface FileRouteTypes {
     | '/dashboard/'
     | '/api/auth/$'
     | '/api/rpc/$'
+    | '/c/$organizationSlug/$catalogSlug'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -177,6 +190,7 @@ export interface RootRouteChildren {
   ApiSplatRoute: typeof ApiSplatRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiRpcSplatRoute: typeof ApiRpcSplatRoute
+  COrganizationSlugCatalogSlugRoute: typeof COrganizationSlugCatalogSlugRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -251,6 +265,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/c/$organizationSlug/$catalogSlug': {
+      id: '/c/$organizationSlug/$catalogSlug'
+      path: '/c/$organizationSlug/$catalogSlug'
+      fullPath: '/c/$organizationSlug/$catalogSlug'
+      preLoaderRoute: typeof COrganizationSlugCatalogSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/rpc/$': {
       id: '/api/rpc/$'
       path: '/api/rpc/$'
@@ -296,6 +317,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiSplatRoute: ApiSplatRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiRpcSplatRoute: ApiRpcSplatRoute,
+  COrganizationSlugCatalogSlugRoute: COrganizationSlugCatalogSlugRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

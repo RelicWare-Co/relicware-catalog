@@ -23,9 +23,11 @@ import {
   useSuspenseQuery,
 } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { FolderPlus, Layers3, Plus, Tags } from "lucide-react";
+import { Copy, FolderPlus, Layers3, Plus, Tags } from "lucide-react";
 import { startTransition, useState } from "react";
 
+import { authClient } from "#/lib/auth-client";
+import { getPublicCatalogUrl } from "#/lib/catalog-links";
 import { getErrorMessage } from "#/lib/get-error-message";
 import { orpc } from "#/orpc/client";
 
@@ -98,6 +100,7 @@ function CatalogsPage() {
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
   const queryClient = useQueryClient();
+  const { data: activeOrganization } = authClient.useActiveOrganization();
   const { data: catalogData } = useSuspenseQuery(catalogListQueryOptions());
   const { data: siteData } = useSuspenseQuery(siteListQueryOptions());
   const { data: themeData } = useSuspenseQuery(themeListQueryOptions());
@@ -115,6 +118,7 @@ function CatalogsPage() {
   const [categoryModalOpened, categoryModal] = useDisclosure(false);
   const [catalogError, setCatalogError] = useState<string | null>(null);
   const [categoryError, setCategoryError] = useState<string | null>(null);
+  const [shareFeedback, setShareFeedback] = useState<string | null>(null);
   const [editingCatalogId, setEditingCatalogId] = useState<string | null>(null);
 
   const catalogForm = useForm<CatalogFormValues>({
@@ -324,6 +328,25 @@ function CatalogsPage() {
     label: category.name,
   }));
 
+  const publicCatalogUrl =
+    activeOrganization?.slug && selectedCatalog?.slug
+      ? getPublicCatalogUrl(activeOrganization.slug, selectedCatalog.slug)
+      : null;
+
+  const handleCopyCatalogLink = async () => {
+    if (!publicCatalogUrl) {
+      setShareFeedback("Este catálogo todavía no tiene un enlace público listo.");
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(publicCatalogUrl);
+      setShareFeedback("Link copiado al portapapeles.");
+    } catch {
+      setShareFeedback("No se pudo copiar automáticamente. Abre el catálogo y copia la URL manualmente.");
+    }
+  };
+
   return (
     <Stack gap="xl">
       <Modal
@@ -518,6 +541,16 @@ function CatalogsPage() {
         </div>
 
         <Group>
+          <Button
+            variant="default"
+            onClick={handleCopyCatalogLink}
+            disabled={!publicCatalogUrl}
+          >
+            <Group gap={8} wrap="nowrap">
+              <Copy size={16} />
+              <span>Copiar link</span>
+            </Group>
+          </Button>
           <Button variant="light" color="brand.6" onClick={openCreateCatalog}>
             <Group gap={8} wrap="nowrap">
               <FolderPlus size={16} />
@@ -533,6 +566,8 @@ function CatalogsPage() {
           </Button>
         </Group>
       </Group>
+
+      {shareFeedback ? <Alert color="blue">{shareFeedback}</Alert> : null}
 
       <Card withBorder radius="lg" p="lg">
         <Group align="end">
@@ -564,6 +599,12 @@ function CatalogsPage() {
             </Group>
           </Button>
         </Group>
+
+        {publicCatalogUrl ? (
+          <Text size="sm" c="dimmed" mt="md">
+            Enlace público: {publicCatalogUrl}
+          </Text>
+        ) : null}
       </Card>
 
       {selectedCatalog ? (
