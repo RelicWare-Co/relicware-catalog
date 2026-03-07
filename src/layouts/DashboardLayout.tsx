@@ -107,7 +107,6 @@ export function DashboardLayout({ children }: { children?: React.ReactNode }) {
       icon: Settings,
       label: "Configuración",
       path: "/dashboard/settings",
-      comingSoon: true,
     },
   ];
 
@@ -144,7 +143,6 @@ export function DashboardLayout({ children }: { children?: React.ReactNode }) {
                   p="xs"
                   style={{
                     borderRadius: "var(--mantine-radius-md)",
-                    border: "1px solid var(--mantine-color-warm-3)",
                     backgroundColor: "var(--mantine-color-white)",
                   }}
                 >
