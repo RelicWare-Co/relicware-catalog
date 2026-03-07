@@ -1,0 +1,302 @@
+@view-transition {
+  navigation: auto;
+}
+
+:root {
+  --vt-origin-x: 50vw;
+  --vt-origin-y: 38vh;
+  --vt-duration-fast: 280ms;
+  --vt-duration-base: 420ms;
+  --vt-duration-slow: 560ms;
+  --vt-ease-emphasis: cubic-bezier(0.22, 1, 0.36, 1);
+  --vt-ease-soft: cubic-bezier(0.4, 0, 0.2, 1);
+  view-transition-name: none;
+}
+
+[data-vt-shell="dashboard-main"] {
+  contain: layout paint;
+  view-transition-name: dashboard-main;
+  isolation: isolate;
+}
+
+[data-vt-name="auth-form"] {
+  contain: layout paint;
+  view-transition-name: auth-form;
+}
+
+[data-vt-name="auth-visual"] {
+  contain: layout paint;
+  view-transition-name: auth-visual;
+}
+
+::view-transition {
+  pointer-events: none;
+}
+
+::view-transition-group(*) {
+  animation-duration: var(--vt-duration-base);
+  animation-timing-function: var(--vt-ease-emphasis);
+}
+
+::view-transition-image-pair(*) {
+  isolation: isolate;
+}
+
+::view-transition-old(*),
+::view-transition-new(*) {
+  backface-visibility: hidden;
+  mix-blend-mode: normal;
+}
+
+::view-transition-group(dashboard-main),
+::view-transition-group(auth-form),
+::view-transition-group(auth-visual) {
+  overflow: clip;
+}
+
+html:active-view-transition-type(route-fade)::view-transition-old(
+    dashboard-main
+  ),
+html:active-view-transition-type(route-fade)::view-transition-old(auth-form),
+html:active-view-transition-type(route-fade)::view-transition-old(auth-visual) {
+  animation: var(--vt-duration-fast) var(--vt-ease-soft) both vt-fade-out;
+}
+
+html:active-view-transition-type(route-fade)::view-transition-new(
+    dashboard-main
+  ),
+html:active-view-transition-type(route-fade)::view-transition-new(auth-form),
+html:active-view-transition-type(route-fade)::view-transition-new(auth-visual) {
+  animation: var(--vt-duration-base) var(--vt-ease-emphasis) both vt-fade-in;
+}
+
+html:active-view-transition-type(dashboard-forward)::view-transition-old(
+    dashboard-main
+  ) {
+  animation: var(--vt-duration-base) var(--vt-ease-emphasis) both
+    vt-slide-out-left;
+}
+
+html:active-view-transition-type(dashboard-forward)::view-transition-new(
+    dashboard-main
+  ) {
+  animation: var(--vt-duration-base) var(--vt-ease-emphasis) both
+    vt-slide-in-left;
+}
+
+html:active-view-transition-type(dashboard-back)::view-transition-old(
+    dashboard-main
+  ) {
+  animation: var(--vt-duration-base) var(--vt-ease-emphasis) both
+    vt-slide-out-right;
+}
+
+html:active-view-transition-type(dashboard-back)::view-transition-new(
+    dashboard-main
+  ) {
+  animation: var(--vt-duration-base) var(--vt-ease-emphasis) both
+    vt-slide-in-right;
+}
+
+html:active-view-transition-type(auth-swap)::view-transition-group(
+    auth-visual
+  ) {
+  animation-duration: var(--vt-duration-slow);
+}
+
+html:active-view-transition-type(auth-swap)::view-transition-old(auth-form) {
+  animation: var(--vt-duration-base) var(--vt-ease-emphasis) both
+    vt-auth-form-out;
+}
+
+html:active-view-transition-type(auth-swap)::view-transition-new(auth-form) {
+  animation: var(--vt-duration-base) var(--vt-ease-emphasis) both
+    vt-auth-form-in;
+}
+
+html:active-view-transition-type(auth-swap)::view-transition-old(auth-visual) {
+  animation: var(--vt-duration-slow) var(--vt-ease-emphasis) both
+    vt-auth-visual-out;
+}
+
+html:active-view-transition-type(auth-swap)::view-transition-new(auth-visual) {
+  animation: var(--vt-duration-slow) var(--vt-ease-emphasis) both
+    vt-auth-visual-in;
+}
+
+html:active-view-transition-type(enter-dashboard)::view-transition-old(
+    auth-form
+  ),
+html:active-view-transition-type(enter-dashboard)::view-transition-old(
+    auth-visual
+  ) {
+  animation: var(--vt-duration-fast) var(--vt-ease-soft) both vt-fade-out;
+}
+
+html:active-view-transition-type(enter-dashboard)::view-transition-new(
+    dashboard-main
+  ) {
+  animation: var(--vt-duration-slow) var(--vt-ease-emphasis) both vt-reveal-in;
+}
+
+html:active-view-transition-type(enter-auth)::view-transition-old(
+    dashboard-main
+  ) {
+  animation: var(--vt-duration-fast) var(--vt-ease-soft) both vt-fade-out;
+}
+
+html:active-view-transition-type(enter-auth)::view-transition-new(auth-form) {
+  animation: var(--vt-duration-base) var(--vt-ease-emphasis) both
+    vt-auth-form-in;
+}
+
+html:active-view-transition-type(enter-auth)::view-transition-new(auth-visual) {
+  animation: var(--vt-duration-slow) var(--vt-ease-emphasis) both
+    vt-auth-visual-in;
+}
+
+@keyframes vt-fade-out {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(20px) scale(0.985);
+  }
+}
+
+@keyframes vt-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(26px) scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes vt-slide-out-left {
+  from {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateX(-72px) scale(0.99);
+  }
+}
+
+@keyframes vt-slide-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(84px) scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes vt-slide-out-right {
+  from {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateX(72px) scale(0.99);
+  }
+}
+
+@keyframes vt-slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(-84px) scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes vt-auth-form-out {
+  from {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateX(-56px) scale(0.985);
+  }
+}
+
+@keyframes vt-auth-form-in {
+  from {
+    opacity: 0;
+    transform: translateX(56px) scale(0.975);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes vt-auth-visual-out {
+  from {
+    opacity: 1;
+    transform: scale(1) translateX(0) rotate(0deg);
+  }
+
+  to {
+    opacity: 0.35;
+    transform: scale(1.035) translateX(-28px) rotate(-1deg);
+  }
+}
+
+@keyframes vt-auth-visual-in {
+  from {
+    opacity: 0;
+    transform: scale(1.06) translateX(36px) rotate(1.5deg);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1) translateX(0) rotate(0deg);
+  }
+}
+
+@keyframes vt-reveal-in {
+  from {
+    clip-path: circle(0 at var(--vt-origin-x) var(--vt-origin-y));
+    opacity: 0;
+    transform: scale(0.985);
+  }
+
+  60% {
+    opacity: 1;
+  }
+
+  to {
+    clip-path: circle(160vmax at var(--vt-origin-x) var(--vt-origin-y));
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation-duration: 1ms;
+  }
+}

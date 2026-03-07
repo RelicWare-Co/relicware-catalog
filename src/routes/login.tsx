@@ -13,7 +13,12 @@ import {
   Title,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
-import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  Link,
+  redirect,
+  useNavigate,
+} from "@tanstack/react-router";
 import { AlertCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -122,6 +127,7 @@ function RouteComponent() {
         justify="center"
         align="center"
         p={{ base: "xl", md: 80 }}
+        data-vt-name="auth-form"
       >
         <Box w="100%" maw={400}>
           <Title
@@ -178,7 +184,8 @@ function RouteComponent() {
             <Text fz="sm" c="dimmed">
               ¿Aún no tienes cuenta?{" "}
               <Anchor
-                href="/register"
+                component={Link}
+                to="/register"
                 c="brand.6"
                 fw={600}
                 style={{ textDecoration: "none" }}
@@ -195,6 +202,7 @@ function RouteComponent() {
         flex={1}
         display={{ base: "none", lg: "block" }}
         p={24} // Padding around the image container
+        data-vt-name="auth-visual"
       >
         <Box
           w="100%"

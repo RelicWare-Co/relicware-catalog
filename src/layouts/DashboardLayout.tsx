@@ -20,7 +20,7 @@ import {
   UnstyledButton,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
-import { Link, Outlet, useLocation } from "@tanstack/react-router";
+import { Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import {
   BookOpen,
   Check,
@@ -32,7 +32,7 @@ import {
   Users,
 } from "lucide-react";
 import type React from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { authClient } from "#/lib/auth-client";
 
@@ -84,10 +84,12 @@ const proPlanFeatures = [
 ];
 
 export function DashboardLayout({ children }: { children?: React.ReactNode }) {
-  const [opened, { toggle }] = useDisclosure();
+  const [opened, { toggle, close }] = useDisclosure();
   const [plansModalOpened, { open: openPlans, close: closePlans }] =
     useDisclosure();
   const location = useLocation();
+  const pathname = location.pathname;
+  const navigate = useNavigate({ from: "/dashboard" });
   const { data: session } = authClient.useSession();
   const [isSigningOut, setIsSigningOut] = useState(false);
 
@@ -106,7 +108,13 @@ export function DashboardLayout({ children }: { children?: React.ReactNode }) {
 
     await authClient.signOut();
 
-    window.location.replace("/login");
+    await navigate({
+      to: "/login",
+      search: {
+        redirect: undefined,
+      },
+      replace: true,
+    });
   };
 
   const navItems = [
@@ -132,6 +140,14 @@ export function DashboardLayout({ children }: { children?: React.ReactNode }) {
     },
   ];
 
+  useEffect(() => {
+    if (!pathname) {
+      return;
+    }
+
+    close();
+  }, [close, pathname]);
+
   return (
     <AppShell
       layout="alt"
@@ -141,13 +157,18 @@ export function DashboardLayout({ children }: { children?: React.ReactNode }) {
         breakpoint: "sm",
         collapsed: { mobile: !opened },
       }}
-      padding="xl"
+      padding={0}
       bg="warm.1" // Referencia a nuestra paleta warm del theme global
     >
       <AppShell.Header
         bg="white"
         withBorder
-        styles={{ header: { borderColor: "var(--mantine-color-warm-3)" } }}
+        styles={{
+          header: {
+            borderColor: "var(--mantine-color-warm-3)",
+            zIndex: 220,
+          },
+        }}
       >
         <Group h="100%" px="xl" justify="space-between">
           <Burger
@@ -214,7 +235,12 @@ export function DashboardLayout({ children }: { children?: React.ReactNode }) {
         bg="white"
         p="md"
         withBorder
-        styles={{ navbar: { borderColor: "var(--mantine-color-warm-3)" } }}
+        styles={{
+          navbar: {
+            borderColor: "var(--mantine-color-warm-3)",
+            zIndex: 230,
+          },
+        }}
       >
         <AppShell.Section mb={40} mt="xs">
           <Group px="md">
@@ -264,6 +290,7 @@ export function DashboardLayout({ children }: { children?: React.ReactNode }) {
                   key={item.path}
                   component={Link}
                   to={item.path}
+                  onClick={close}
                   label={
                     <Group justify="space-between" wrap="nowrap">
                       <Text span>{item.label}</Text>
@@ -303,7 +330,20 @@ export function DashboardLayout({ children }: { children?: React.ReactNode }) {
         </AppShell.Section>
       </AppShell.Navbar>
 
-      <AppShell.Main>
+      {opened ? (
+        <Box
+          hiddenFrom="sm"
+          onClick={close}
+          style={{
+            position: "fixed",
+            inset: "75px 0 0",
+            backgroundColor: "rgba(32, 24, 18, 0.14)",
+            zIndex: 210,
+          }}
+        />
+      ) : null}
+
+      <AppShell.Main style={{ backgroundColor: "var(--mantine-color-warm-1)" }}>
         <Modal
           opened={plansModalOpened}
           onClose={closePlans}
@@ -459,7 +499,17 @@ export function DashboardLayout({ children }: { children?: React.ReactNode }) {
           </SimpleGrid>
         </Modal>
 
-        {children || <Outlet />}
+        <Box
+          data-vt-shell="dashboard-main"
+          mih="calc(100dvh - 75px)"
+          p={{ base: "md", sm: "xl" }}
+          style={{
+            backgroundColor: "var(--mantine-color-warm-1)",
+            overflow: "clip",
+          }}
+        >
+          {children || <Outlet />}
+        </Box>
       </AppShell.Main>
     </AppShell>
   );

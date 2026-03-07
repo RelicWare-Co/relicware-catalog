@@ -8,7 +8,9 @@ import {
 } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import "@mantine/core/styles.css";
+import "../components/view-transitions/view-transitions.css";
 
+import { ViewTransitionOrchestrator } from "../components/view-transitions/ViewTransitionOrchestrator";
 import TanStackQueryDevtools from "../integrations/tanstack-query/devtools";
 import TanStackQueryProvider from "../integrations/tanstack-query/root-provider";
 
@@ -46,6 +48,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       <body>
         <MantineProvider theme={theme} forceColorScheme="light">
           <TanStackQueryProvider>
+            <ViewTransitionOrchestrator />
             {children}
             <TanStackDevtools
               config={{
