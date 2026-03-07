@@ -9,26 +9,28 @@ import * as authSchema from "./schema/auth.schema.ts";
 import * as mainSchema from "./schema/main.schema.ts";
 
 const schema = {
-	...authSchema,
-	...mainSchema,
+  ...authSchema,
+  ...mainSchema,
 };
 
-const migrationsFolder = fileURLToPath(new URL("../../drizzle", import.meta.url));
+const migrationsFolder = fileURLToPath(
+  new URL("../../drizzle", import.meta.url),
+);
 
 const globalForDb = globalThis as typeof globalThis & {
-	__relicwareMigrationsApplied?: boolean;
+  __relicwareMigrationsApplied?: boolean;
 };
 
 // biome-ignore lint/style/noNonNullAssertion: DATABASE_URL is required at runtime
 export const db = drizzle(process.env.DATABASE_URL!, { schema });
 
 export function migrateDb() {
-	if (globalForDb.__relicwareMigrationsApplied) {
-		return;
-	}
+  if (globalForDb.__relicwareMigrationsApplied) {
+    return;
+  }
 
-	migrate(db, { migrationsFolder });
-	globalForDb.__relicwareMigrationsApplied = true;
+  migrate(db, { migrationsFolder });
+  globalForDb.__relicwareMigrationsApplied = true;
 }
 
 migrateDb();

@@ -52,11 +52,15 @@ function RouteComponent() {
     },
     validate: {
       name: (value) =>
-        value.trim().length >= 2 ? null : "Ingresa el nombre de tu negocio o tu nombre",
+        value.trim().length >= 2
+          ? null
+          : "Ingresa el nombre de tu negocio o tu nombre",
       email: (value) =>
         /^\S+@\S+$/.test(value.trim()) ? null : "Ingresa un correo válido",
       password: (value) =>
-        value.length >= 8 ? null : "La contraseña debe tener al menos 8 caracteres",
+        value.length >= 8
+          ? null
+          : "La contraseña debe tener al menos 8 caracteres",
       confirmPassword: (value, values) =>
         value === values.password ? null : "Las contraseñas no coinciden",
     },
@@ -139,11 +143,7 @@ function RouteComponent() {
           <form onSubmit={handleSubmit}>
             <Stack gap="lg">
               {submitError ? (
-                <Alert
-                  color="red"
-                  radius="lg"
-                  icon={<AlertCircle size={18} />}
-                >
+                <Alert color="red" radius="lg" icon={<AlertCircle size={18} />}>
                   {submitError}
                 </Alert>
               ) : null}

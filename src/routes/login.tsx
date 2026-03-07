@@ -52,7 +52,9 @@ function RouteComponent() {
       email: (value) =>
         /^\S+@\S+$/.test(value.trim()) ? null : "Ingresa un correo válido",
       password: (value) =>
-        value.length >= 8 ? null : "La contraseña debe tener al menos 8 caracteres",
+        value.length >= 8
+          ? null
+          : "La contraseña debe tener al menos 8 caracteres",
     },
   });
 
@@ -138,11 +140,7 @@ function RouteComponent() {
           <form onSubmit={handleSubmit}>
             <Stack gap="xl">
               {submitError ? (
-                <Alert
-                  color="red"
-                  radius="lg"
-                  icon={<AlertCircle size={18} />}
-                >
+                <Alert color="red" radius="lg" icon={<AlertCircle size={18} />}>
                   {submitError}
                 </Alert>
               ) : null}

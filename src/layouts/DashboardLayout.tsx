@@ -93,12 +93,13 @@ export function DashboardLayout({ children }: { children?: React.ReactNode }) {
 
   const displayName = session?.user.name || "Tu cuenta";
   const displayEmail = session?.user.email || "";
-  const initials = displayName
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join("") || "CA";
+  const initials =
+    displayName
+      .split(" ")
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase())
+      .join("") || "CA";
 
   const handleSignOut = async () => {
     setIsSigningOut(true);

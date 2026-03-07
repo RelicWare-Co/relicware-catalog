@@ -66,8 +66,8 @@ function SettingsPage() {
             variant="filled"
             color="brand"
             mt="md"
-            align="self-start"
             w="fit-content"
+            style={{ alignSelf: "flex-start" }}
           >
             Guardar Cambios
           </Button>

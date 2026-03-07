@@ -12,7 +12,10 @@ import { organization } from "./auth.schema.ts";
 
 type JsonObject = Record<string, unknown>;
 
-const idColumn = () => text("id").primaryKey().$defaultFn(() => crypto.randomUUID());
+const idColumn = () =>
+  text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID());
 
 const timestampColumns = () => ({
   createdAt: integer("created_at", { mode: "timestamp_ms" })
@@ -48,9 +51,7 @@ export const locations = sqliteTable(
     isPrimary: integer("is_primary", { mode: "boolean" })
       .notNull()
       .default(false),
-    isActive: integer("is_active", { mode: "boolean" })
-      .notNull()
-      .default(true),
+    isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
     ...timestampColumns(),
   },
   (table) => [
@@ -96,7 +97,9 @@ export const brandThemes = sqliteTable(
     })
       .notNull()
       .default("elevated"),
-    styleOverrides: text("style_overrides", { mode: "json" }).$type<JsonObject>(),
+    styleOverrides: text("style_overrides", {
+      mode: "json",
+    }).$type<JsonObject>(),
     isDefault: integer("is_default", { mode: "boolean" })
       .notNull()
       .default(false),
@@ -104,7 +107,10 @@ export const brandThemes = sqliteTable(
   },
   (table) => [
     index("brand_themes_organization_id_idx").on(table.organizationId),
-    uniqueIndex("brand_themes_org_name_uidx").on(table.organizationId, table.name),
+    uniqueIndex("brand_themes_org_name_uidx").on(
+      table.organizationId,
+      table.name,
+    ),
   ],
 );
 
@@ -143,9 +149,7 @@ export const sites = sqliteTable(
     seoDescription: text("seo_description"),
     socialLinks: text("social_links", { mode: "json" }).$type<JsonObject>(),
     settings: text("settings", { mode: "json" }).$type<JsonObject>(),
-    isPublic: integer("is_public", { mode: "boolean" })
-      .notNull()
-      .default(true),
+    isPublic: integer("is_public", { mode: "boolean" }).notNull().default(true),
     publishedAt: integer("published_at", { mode: "timestamp_ms" }),
     ...timestampColumns(),
   },
@@ -191,7 +195,10 @@ export const siteSections = sqliteTable(
   },
   (table) => [
     index("site_sections_site_id_idx").on(table.siteId),
-    uniqueIndex("site_sections_site_sort_uidx").on(table.siteId, table.sortOrder),
+    uniqueIndex("site_sections_site_sort_uidx").on(
+      table.siteId,
+      table.sortOrder,
+    ),
   ],
 );
 
@@ -225,9 +232,7 @@ export const siteLinks = sqliteTable(
     isHighlighted: integer("is_highlighted", { mode: "boolean" })
       .notNull()
       .default(false),
-    isActive: integer("is_active", { mode: "boolean" })
-      .notNull()
-      .default(true),
+    isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
     ...timestampColumns(),
   },
   (table) => [
@@ -268,9 +273,7 @@ export const catalogs = sqliteTable(
       .notNull()
       .default("exact"),
     coverImageUrl: text("cover_image_url"),
-    isPublic: integer("is_public", { mode: "boolean" })
-      .notNull()
-      .default(true),
+    isPublic: integer("is_public", { mode: "boolean" }).notNull().default(true),
     settings: text("settings", { mode: "json" }).$type<JsonObject>(),
     ...timestampColumns(),
   },
@@ -355,7 +358,10 @@ export const catalogItems = sqliteTable(
     index("catalog_items_catalog_id_idx").on(table.catalogId),
     index("catalog_items_category_id_idx").on(table.categoryId),
     index("catalog_items_sku_idx").on(table.sku),
-    uniqueIndex("catalog_items_catalog_slug_uidx").on(table.catalogId, table.slug),
+    uniqueIndex("catalog_items_catalog_slug_uidx").on(
+      table.catalogId,
+      table.slug,
+    ),
   ],
 );
 
@@ -511,13 +517,16 @@ export const siteRelations = relations(sites, ({ one, many }) => ({
   reservationRequests: many(reservationRequests),
 }));
 
-export const siteSectionRelations = relations(siteSections, ({ one, many }) => ({
-  site: one(sites, {
-    fields: [siteSections.siteId],
-    references: [sites.id],
+export const siteSectionRelations = relations(
+  siteSections,
+  ({ one, many }) => ({
+    site: one(sites, {
+      fields: [siteSections.siteId],
+      references: [sites.id],
+    }),
+    links: many(siteLinks),
   }),
-  links: many(siteLinks),
-}));
+);
 
 export const siteLinkRelations = relations(siteLinks, ({ one }) => ({
   section: one(siteSections, {
@@ -566,17 +575,20 @@ export const catalogCategoryRelations = relations(
   }),
 );
 
-export const catalogItemRelations = relations(catalogItems, ({ one, many }) => ({
-  catalog: one(catalogs, {
-    fields: [catalogItems.catalogId],
-    references: [catalogs.id],
+export const catalogItemRelations = relations(
+  catalogItems,
+  ({ one, many }) => ({
+    catalog: one(catalogs, {
+      fields: [catalogItems.catalogId],
+      references: [catalogs.id],
+    }),
+    category: one(catalogCategories, {
+      fields: [catalogItems.categoryId],
+      references: [catalogCategories.id],
+    }),
+    variants: many(catalogItemVariants),
   }),
-  category: one(catalogCategories, {
-    fields: [catalogItems.categoryId],
-    references: [catalogCategories.id],
-  }),
-  variants: many(catalogItemVariants),
-}));
+);
 
 export const catalogItemVariantRelations = relations(
   catalogItemVariants,
