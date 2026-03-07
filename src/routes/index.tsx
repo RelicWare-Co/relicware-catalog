@@ -92,11 +92,18 @@ const faqs = [
   },
 ] as const;
 
+const sectionSpacing = { base: 64, md: 104 } as const;
+const cardBorderStyle = { borderColor: "var(--landing-border)" } as const;
+const glassPanelStyle = {
+  borderColor: "var(--landing-border)",
+  backdropFilter: "blur(10px)",
+} as const;
+
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       {
-        title: "Relic | Menús digitales y catálogos con QR",
+        title: "Catalog | Menús digitales y catálogos con QR",
       },
       {
         name: "description",
@@ -145,23 +152,51 @@ function LandingStyles() {
         --landing-ink-strong: var(--mantine-color-brand-9);
         --landing-ink: color-mix(
           in srgb,
-          var(--mantine-color-brand-9) 74%,
-          var(--mantine-color-warm-7)
+          var(--mantine-color-brand-9) 76%,
+          var(--mantine-color-warm-8)
         );
         --landing-ink-soft: color-mix(
           in srgb,
-          var(--mantine-color-brand-9) 62%,
+          var(--mantine-color-brand-9) 60%,
           var(--mantine-color-warm-7)
         );
-        --landing-inverse: var(--mantine-color-brand-0);
         --landing-inverse-soft: color-mix(
           in srgb,
-          var(--mantine-color-brand-0) 82%,
+          var(--mantine-color-brand-0) 84%,
           var(--mantine-color-warm-2)
         );
+        --landing-surface: color-mix(
+          in srgb,
+          white 88%,
+          var(--mantine-color-warm-1)
+        );
+        --landing-surface-muted: color-mix(
+          in srgb,
+          white 76%,
+          var(--mantine-color-warm-1)
+        );
+        --landing-border: color-mix(
+          in srgb,
+          var(--mantine-color-brand-4) 18%,
+          var(--mantine-color-warm-4)
+        );
+        --landing-border-strong: color-mix(
+          in srgb,
+          var(--mantine-color-brand-5) 34%,
+          var(--mantine-color-warm-4)
+        );
+        --landing-shadow: 0 16px 40px rgba(160, 65, 24, 0.08);
+        --landing-shadow-hover: 0 24px 54px rgba(160, 65, 24, 0.12);
+        --landing-transition: 220ms cubic-bezier(0.19, 1, 0.22, 1);
         background:
-          radial-gradient(circle at top left, rgba(250, 227, 213, 0.75), transparent 32%),
-          linear-gradient(180deg, var(--mantine-color-warm-0) 0%, #fffdfa 28%, var(--mantine-color-warm-1) 66%, #fffdfa 100%);
+          radial-gradient(circle at top left, rgba(250, 227, 213, 0.72), transparent 32%),
+          linear-gradient(
+            180deg,
+            var(--mantine-color-warm-0) 0%,
+            color-mix(in srgb, white 82%, var(--mantine-color-warm-1)) 28%,
+            var(--mantine-color-warm-1) 66%,
+            color-mix(in srgb, white 88%, var(--mantine-color-warm-1)) 100%
+          );
       }
 
       .landing-ink-strong {
@@ -176,12 +211,58 @@ function LandingStyles() {
         color: var(--landing-ink-soft);
       }
 
-      .landing-inverse {
-        color: var(--landing-inverse);
-      }
-
       .landing-inverse-soft {
         color: var(--landing-inverse-soft);
+      }
+
+      .landing-display {
+        font-size: clamp(2.85rem, 6vw, 5.2rem);
+        line-height: 0.98;
+        letter-spacing: -0.04em;
+        text-wrap: balance;
+      }
+
+      .landing-section-title {
+        font-size: clamp(2rem, 4vw, 3.25rem);
+        line-height: 1.03;
+        text-wrap: balance;
+      }
+
+      .landing-card-title {
+        text-wrap: balance;
+      }
+
+      .landing-copy {
+        text-wrap: pretty;
+      }
+
+      .landing-panel {
+        background: var(--landing-surface);
+        border-color: var(--landing-border);
+        box-shadow: var(--landing-shadow);
+      }
+
+      .landing-panel-muted {
+        background: var(--landing-surface-muted);
+        border-color: var(--landing-border);
+      }
+
+      .landing-panel-strong {
+        background: linear-gradient(
+          180deg,
+          var(--mantine-color-brand-9),
+          color-mix(in srgb, var(--mantine-color-brand-9) 88%, var(--mantine-color-brand-8))
+        );
+      }
+
+      .landing-outline-button {
+        background: color-mix(in srgb, white 90%, var(--mantine-color-warm-1));
+        border-color: var(--landing-border-strong);
+        color: var(--landing-ink-strong);
+      }
+
+      .landing-outline-button:hover {
+        background: color-mix(in srgb, white 78%, var(--mantine-color-warm-1));
       }
 
       .hero-shell {
@@ -202,7 +283,7 @@ function LandingStyles() {
         height: min(48vw, 540px);
         right: -12%;
         top: -6%;
-        background: radial-gradient(circle, rgba(232, 117, 48, 0.18) 0%, rgba(232, 117, 48, 0.04) 55%, transparent 72%);
+        background: radial-gradient(circle, rgba(232, 117, 48, 0.16) 0%, rgba(232, 117, 48, 0.04) 55%, transparent 72%);
         filter: blur(12px);
       }
 
@@ -211,7 +292,7 @@ function LandingStyles() {
         height: min(32vw, 360px);
         left: -10%;
         top: 8%;
-        border: 1px solid rgba(232, 117, 48, 0.12);
+        border: 1px solid color-mix(in srgb, var(--mantine-color-brand-4) 18%, transparent);
       }
 
       .section-eyebrow {
@@ -221,15 +302,15 @@ function LandingStyles() {
 
       .surface-card {
         transition:
-          transform 220ms cubic-bezier(0.19, 1, 0.22, 1),
-          box-shadow 220ms cubic-bezier(0.19, 1, 0.22, 1),
-          border-color 220ms ease;
+          transform var(--landing-transition),
+          box-shadow var(--landing-transition),
+          border-color var(--landing-transition);
       }
 
       .surface-card:hover {
         transform: translateY(-4px);
-        box-shadow: 0 20px 50px rgba(160, 65, 24, 0.08);
-        border-color: rgba(232, 117, 48, 0.2);
+        box-shadow: var(--landing-shadow-hover);
+        border-color: var(--landing-border-strong);
       }
 
       .proof-chip {
@@ -241,18 +322,29 @@ function LandingStyles() {
       }
 
       .metric-card {
-        background: linear-gradient(180deg, rgba(255, 245, 239, 0.16), rgba(255, 245, 239, 0.08));
-        border: 1px solid rgba(255, 244, 238, 0.18);
-        backdrop-filter: blur(8px);
+        background: linear-gradient(
+          180deg,
+          color-mix(in srgb, var(--mantine-color-brand-8) 18%, transparent),
+          color-mix(in srgb, var(--mantine-color-brand-9) 10%, transparent)
+        );
+        border: 1px solid color-mix(in srgb, var(--mantine-color-brand-1) 18%, transparent);
+        backdrop-filter: blur(10px);
       }
 
       .faq-shell .mantine-Accordion-item {
-        border: 1px solid rgba(232, 117, 48, 0.1);
-        background: rgba(255, 252, 248, 0.88);
+        border: 1px solid var(--landing-border);
+        background: var(--landing-surface);
+        box-shadow: var(--landing-shadow);
       }
 
       .faq-shell .mantine-Accordion-control {
         min-height: 60px;
+      }
+
+      .faq-shell .mantine-Accordion-control:focus-visible,
+      .landing-focus:focus-visible {
+        outline: 2px solid var(--mantine-color-brand-6);
+        outline-offset: 3px;
       }
 
       @media (max-width: 62em) {
@@ -337,8 +429,8 @@ function HeroAnimation() {
       </Box>
 
       <Paper
-        shadow="xl"
-        radius="32px"
+        shadow="md"
+        radius="xl"
         p="md"
         withBorder
         w={174}
@@ -346,14 +438,14 @@ function HeroAnimation() {
         bottom={0}
         left={0}
         bg="white"
-        style={{ zIndex: 2, borderColor: "rgba(232, 117, 48, 0.16)" }}
+        style={cardBorderStyle}
       >
         <Box
           h={96}
           mb="sm"
           pos="relative"
           style={{
-            borderRadius: 18,
+            borderRadius: "var(--mantine-radius-lg)",
             overflow: "hidden",
             background:
               "linear-gradient(180deg, var(--mantine-color-warm-0), var(--mantine-color-warm-2))",
@@ -393,8 +485,8 @@ function HeroAnimation() {
       </Paper>
 
       <Paper
-        shadow="xl"
-        radius="28px"
+        shadow="md"
+        radius="xl"
         p="md"
         withBorder
         w={228}
@@ -402,7 +494,7 @@ function HeroAnimation() {
         top={18}
         right={0}
         bg="white"
-        style={{ zIndex: 2, borderColor: "rgba(232, 117, 48, 0.14)" }}
+        style={cardBorderStyle}
       >
         <Group mb="md" wrap="nowrap">
           <Avatar size="sm" color="brand" radius="md">
@@ -435,7 +527,7 @@ function HeroAnimation() {
               right: 0,
               animation: "popAlert 4s cubic-bezier(0.19, 1, 0.22, 1) infinite",
               zIndex: 10,
-              borderColor: "rgba(232, 117, 48, 0.18)",
+              borderColor: "var(--landing-border-strong)",
             }}
           >
             <Group wrap="nowrap">
@@ -464,7 +556,7 @@ function HeroAnimation() {
             p="xs"
             bg="warm.0"
             style={{
-              borderRadius: 12,
+              borderRadius: "var(--mantine-radius-md)",
               opacity: 0.7,
               transform: "translateY(52px)",
             }}
@@ -495,7 +587,7 @@ function HeroAnimation() {
             p="xs"
             bg="warm.0"
             style={{
-              borderRadius: 12,
+              borderRadius: "var(--mantine-radius-md)",
               opacity: 0.46,
               transform: "translateY(52px)",
             }}
@@ -561,13 +653,7 @@ function Index() {
                     order={1}
                     fw={900}
                     maw={700}
-                    style={{
-                      fontSize: "clamp(2.85rem, 6vw, 5.4rem)",
-                      lineHeight: 0.98,
-                      letterSpacing: "-0.04em",
-                      textWrap: "balance",
-                      color: "var(--landing-ink-strong)",
-                    }}
+                    className="landing-display landing-ink-strong"
                   >
                     Tu menú y catálogo dejan de sentirse improvisados.
                   </Title>
@@ -575,9 +661,8 @@ function Index() {
                   <Text
                     size="xl"
                     maw={580}
-                    className="landing-ink"
+                    className="landing-ink landing-copy"
                     lh={1.65}
-                    style={{ textWrap: "pretty" }}
                   >
                     Publica un catálogo digital claro, con tu propio link y QR
                     listos para compartir. Tus clientes encuentran lo que vendes
@@ -589,9 +674,10 @@ function Index() {
                   <Button
                     component={Link}
                     to="/register"
-                    size="xl"
+                    size="lg"
                     color="brand"
                     radius="xl"
+                    className="landing-focus"
                     rightSection={<ChevronRight size={20} aria-hidden="true" />}
                   >
                     Crear mi menú gratis
@@ -602,13 +688,7 @@ function Index() {
                     size="lg"
                     variant="default"
                     radius="xl"
-                    styles={{
-                      root: {
-                        background: "rgba(255, 252, 248, 0.9)",
-                        borderColor: "rgba(232, 117, 48, 0.18)",
-                        color: "var(--landing-ink-strong)",
-                      },
-                    }}
+                    className="landing-outline-button landing-focus"
                   >
                     Iniciar sesión
                   </Button>
@@ -620,9 +700,7 @@ function Index() {
                       p="md"
                       radius="xl"
                       withBorder
-                      bg="rgba(255, 252, 248, 0.82)"
-                      className="proof-chip surface-card"
-                      style={{ borderColor: "rgba(232, 117, 48, 0.12)" }}
+                      className="landing-panel proof-chip surface-card"
                     >
                       <Group gap="xs" wrap="nowrap">
                         <ThemeIcon
@@ -645,9 +723,7 @@ function Index() {
                       p="md"
                       radius="xl"
                       withBorder
-                      bg="rgba(255, 252, 248, 0.82)"
-                      className="proof-chip surface-card"
-                      style={{ borderColor: "rgba(232, 117, 48, 0.12)" }}
+                      className="landing-panel proof-chip surface-card"
                     >
                       <Group gap="xs" wrap="nowrap">
                         <ThemeIcon
@@ -670,9 +746,7 @@ function Index() {
                       p="md"
                       radius="xl"
                       withBorder
-                      bg="rgba(255, 252, 248, 0.82)"
-                      className="proof-chip surface-card"
-                      style={{ borderColor: "rgba(232, 117, 48, 0.12)" }}
+                      className="landing-panel proof-chip surface-card"
                     >
                       <Group gap="xs" wrap="nowrap">
                         <ThemeIcon
@@ -696,14 +770,11 @@ function Index() {
             <Grid.Col span={{ base: 12, md: 6 }}>
               <Stack gap="lg" pos="relative" style={{ zIndex: 1 }}>
                 <Paper
-                  p={{ base: "lg", md: 26 }}
-                  radius="36px"
-                  bg="rgba(255, 250, 246, 0.76)"
+                  p={{ base: "lg", md: "xl" }}
+                  radius="xl"
                   withBorder
-                  style={{
-                    borderColor: "rgba(232, 117, 48, 0.12)",
-                    backdropFilter: "blur(10px)",
-                  }}
+                  className="landing-panel"
+                  style={glassPanelStyle}
                 >
                   <HeroAnimation />
                 </Paper>
@@ -712,9 +783,8 @@ function Index() {
                   <Grid.Col span={{ base: 12, sm: 7 }}>
                     <Paper
                       p="lg"
-                      radius="28px"
-                      bg="brand.9"
-                      className="surface-card"
+                      radius="xl"
+                      className="landing-panel-strong surface-card"
                     >
                       <Text
                         size="sm"
@@ -727,10 +797,8 @@ function Index() {
                       <Title
                         order={3}
                         c="brand.0"
-                        style={{
-                          fontSize: "clamp(1.5rem, 3.5vw, 2.2rem)",
-                          textWrap: "balance",
-                        }}
+                        className="landing-card-title"
+                        style={{ fontSize: "clamp(1.5rem, 3.5vw, 2.2rem)" }}
                       >
                         Menos mensajes repetidos. Más clientes listos para
                         decidir.
@@ -741,11 +809,9 @@ function Index() {
                   <Grid.Col span={{ base: 12, sm: 5 }}>
                     <Paper
                       p="lg"
-                      radius="28px"
+                      radius="xl"
                       withBorder
-                      bg="rgba(255, 252, 248, 0.92)"
-                      className="surface-card"
-                      style={{ borderColor: "rgba(232, 117, 48, 0.12)" }}
+                      className="landing-panel surface-card"
                     >
                       <Text
                         size="sm"
@@ -777,7 +843,7 @@ function Index() {
         </Container>
       </Box>
 
-      <Container size="xl" py={{ base: 64, md: 110 }}>
+      <Container size="xl" py={sectionSpacing}>
         <Grid gutter={{ base: 28, md: 46 }} align="stretch">
           <Grid.Col span={{ base: 12, md: 4 }}>
             <Stack gap="md" pr={{ md: 16 }}>
@@ -786,17 +852,17 @@ function Index() {
               </Text>
               <Title
                 order={2}
-                className="landing-ink-strong"
+                className="landing-section-title landing-ink-strong"
                 maw={420}
-                style={{
-                  fontSize: "clamp(2rem, 4vw, 3.4rem)",
-                  lineHeight: 1.02,
-                  textWrap: "balance",
-                }}
               >
                 Una landing útil para vender, no solo para verse bien.
               </Title>
-              <Text size="lg" className="landing-ink" lh={1.7} maw={420}>
+              <Text
+                size="lg"
+                className="landing-ink landing-copy"
+                lh={1.7}
+                maw={420}
+              >
                 La experiencia queda centrada en rapidez, claridad y
                 actualización continua. Cada bloque empuja al mismo resultado:
                 que tu cliente llegue al producto correcto sin fricción.
@@ -809,12 +875,10 @@ function Index() {
               <Grid.Col span={{ base: 12, sm: 7 }}>
                 <Paper
                   p={{ base: "xl", md: 34 }}
-                  radius="32px"
+                  radius="xl"
                   withBorder
                   h="100%"
-                  className="surface-card"
-                  bg="rgba(255, 252, 248, 0.96)"
-                  style={{ borderColor: "rgba(232, 117, 48, 0.12)" }}
+                  className="landing-panel surface-card"
                 >
                   <Stack h="100%" justify="space-between">
                     <Stack gap="lg">
@@ -836,14 +900,13 @@ function Index() {
                       </Badge>
                       <Title
                         order={3}
-                        className="landing-ink-strong"
-                        style={{ textWrap: "balance" }}
+                        className="landing-card-title landing-ink-strong"
                       >
                         {featureCards[0].title}
                       </Title>
                       <Text
                         size="lg"
-                        className="landing-ink"
+                        className="landing-ink landing-copy"
                         lh={1.7}
                         maw={520}
                       >
@@ -866,10 +929,9 @@ function Index() {
               <Grid.Col span={{ base: 12, sm: 5 }}>
                 <Paper
                   p={{ base: "xl", md: 30 }}
-                  radius="32px"
+                  radius="xl"
                   h="100%"
-                  className="surface-card"
-                  bg="brand.8"
+                  className="landing-panel-strong surface-card"
                 >
                   <Stack h="100%" justify="space-between">
                     <Stack gap="lg">
@@ -892,13 +954,16 @@ function Index() {
                       <Title
                         order={3}
                         c="brand.0"
-                        style={{ textWrap: "balance" }}
+                        className="landing-card-title"
                       >
                         {featureCards[1].title}
                       </Title>
                     </Stack>
 
-                    <Text lh={1.7} className="landing-inverse-soft">
+                    <Text
+                      lh={1.7}
+                      className="landing-inverse-soft landing-copy"
+                    >
                       {featureCards[1].description}
                     </Text>
                   </Stack>
@@ -908,11 +973,9 @@ function Index() {
               <Grid.Col span={12}>
                 <Paper
                   p={{ base: "xl", md: 34 }}
-                  radius="32px"
+                  radius="xl"
                   withBorder
-                  className="surface-card"
-                  bg="rgba(255, 252, 248, 0.96)"
-                  style={{ borderColor: "rgba(232, 117, 48, 0.12)" }}
+                  className="landing-panel surface-card"
                 >
                   <Grid align="center" gutter="xl">
                     <Grid.Col span={{ base: 12, md: 7 }}>
@@ -927,14 +990,13 @@ function Index() {
                         </Badge>
                         <Title
                           order={3}
-                          className="landing-ink-strong"
-                          style={{ textWrap: "balance" }}
+                          className="landing-card-title landing-ink-strong"
                         >
                           {featureCards[2].title}
                         </Title>
                         <Text
                           size="lg"
-                          className="landing-ink"
+                          className="landing-ink landing-copy"
                           lh={1.7}
                           maw={560}
                         >
@@ -946,10 +1008,10 @@ function Index() {
                     <Grid.Col span={{ base: 12, md: 5 }}>
                       <Paper
                         p="md"
-                        radius="22px"
-                        bg="warm.1"
+                        radius="lg"
                         withBorder
-                        style={{ borderColor: "rgba(232, 117, 48, 0.1)" }}
+                        className="landing-panel-muted"
+                        style={cardBorderStyle}
                       >
                         <Group wrap="nowrap" gap="sm">
                           <ThemeIcon
@@ -973,14 +1035,17 @@ function Index() {
                               className="landing-ink-strong"
                               truncate
                             >
-                              relic.app/menu/tunegocio
+                              catalog.app/menu/tunegocio
                             </Text>
                           </Box>
                           <Button
+                            component={Link}
+                            to="/register"
                             size="xs"
                             radius="xl"
                             color="brand"
                             variant="light"
+                            className="landing-focus"
                           >
                             Ver demo
                           </Button>
@@ -1003,13 +1068,8 @@ function Index() {
             </Text>
             <Title
               order={2}
-              className="landing-ink-strong"
+              className="landing-section-title landing-ink-strong"
               maw={760}
-              style={{
-                fontSize: "clamp(2rem, 4vw, 3.2rem)",
-                lineHeight: 1.02,
-                textWrap: "balance",
-              }}
             >
               De la idea al QR publicado en tres movimientos claros.
             </Title>
@@ -1020,12 +1080,10 @@ function Index() {
               <Grid.Col span={{ base: 12, md: 4 }} key={item.step}>
                 <Paper
                   p={{ base: "xl", md: 30 }}
-                  radius="30px"
+                  radius="xl"
                   withBorder
                   h="100%"
-                  className="surface-card"
-                  bg="rgba(255, 252, 248, 0.95)"
-                  style={{ borderColor: "rgba(232, 117, 48, 0.1)" }}
+                  className="landing-panel surface-card"
                 >
                   <Stack gap="md">
                     <Text
@@ -1038,11 +1096,7 @@ function Index() {
                     <Title order={4} className="landing-ink-strong">
                       {item.title}
                     </Title>
-                    <Text
-                      className="landing-ink"
-                      lh={1.7}
-                      style={{ textWrap: "pretty" }}
-                    >
+                    <Text className="landing-ink landing-copy" lh={1.7}>
                       {item.description}
                     </Text>
                   </Stack>
@@ -1053,7 +1107,7 @@ function Index() {
         </Container>
       </Box>
 
-      <Box py={{ base: 62, md: 108 }} bg="brand.9">
+      <Box py={sectionSpacing} bg="brand.9">
         <Container size="lg">
           <Grid align="center" gutter={{ base: 36, md: 72 }}>
             <Grid.Col span={{ base: 12, md: 7 }}>
@@ -1070,11 +1124,7 @@ function Index() {
                   order={2}
                   c="brand.0"
                   maw={720}
-                  style={{
-                    fontSize: "clamp(2rem, 4vw, 3.4rem)",
-                    lineHeight: 1.02,
-                    textWrap: "balance",
-                  }}
+                  className="landing-section-title"
                 >
                   “Mis clientes ya no me piden el PDF. Entran al link, miran y
                   deciden.”
@@ -1083,7 +1133,7 @@ function Index() {
                   size="lg"
                   lh={1.75}
                   maw={620}
-                  className="landing-inverse-soft"
+                  className="landing-inverse-soft landing-copy"
                 >
                   Antes perdíamos tiempo mandando fotos del menú cada vez que
                   alguien escribía. Ahora un cambio tarda segundos y toda la
@@ -1109,7 +1159,7 @@ function Index() {
 
             <Grid.Col span={{ base: 12, md: 5 }}>
               <Stack gap="md">
-                <Paper p="xl" radius="28px" className="metric-card">
+                <Paper p="xl" radius="xl" className="metric-card">
                   <Text
                     size="sm"
                     fw={700}
@@ -1130,7 +1180,7 @@ function Index() {
                   </Text>
                 </Paper>
 
-                <Paper p="xl" radius="28px" className="metric-card">
+                <Paper p="xl" radius="xl" className="metric-card">
                   <Text
                     size="sm"
                     fw={700}
@@ -1159,20 +1209,12 @@ function Index() {
         </Container>
       </Box>
 
-      <Container size="sm" py={{ base: 64, md: 104 }}>
+      <Container size="sm" py={sectionSpacing}>
         <Stack gap={18} mb={42} ta="center" align="center">
           <Text size="sm" fw={800} c="brand.7" className="section-eyebrow">
             Preguntas frecuentes
           </Text>
-          <Title
-            order={2}
-            className="landing-ink-strong"
-            style={{
-              fontSize: "clamp(2rem, 4vw, 3rem)",
-              lineHeight: 1.04,
-              textWrap: "balance",
-            }}
-          >
+          <Title order={2} className="landing-section-title landing-ink-strong">
             Lo necesario para decidir si te sirve hoy.
           </Title>
         </Stack>
@@ -1198,11 +1240,10 @@ function Index() {
       <Container size="md" pb={{ base: 78, md: 116 }}>
         <Paper
           p={{ base: "xl", md: 44 }}
-          radius="36px"
-          bg="rgba(255, 250, 246, 0.92)"
+          radius="xl"
           withBorder
           ta="center"
-          style={{ borderColor: "rgba(232, 117, 48, 0.12)" }}
+          className="landing-panel"
         >
           <Stack align="center" gap="lg">
             <Text size="sm" fw={800} c="brand.7" className="section-eyebrow">
@@ -1210,26 +1251,27 @@ function Index() {
             </Text>
             <Title
               order={2}
-              className="landing-ink-strong"
+              className="landing-section-title landing-ink-strong"
               maw={640}
-              style={{
-                fontSize: "clamp(2rem, 4vw, 3.2rem)",
-                lineHeight: 1.02,
-                textWrap: "balance",
-              }}
             >
               Toma el control de tu presencia digital sin complicarte el día.
             </Title>
-            <Text size="lg" className="landing-ink" maw={560} lh={1.7}>
+            <Text
+              size="lg"
+              className="landing-ink landing-copy"
+              maw={560}
+              lh={1.7}
+            >
               Regístrate gratis y publica la primera versión de tu menú en menos
               de cinco minutos.
             </Text>
             <Button
               component={Link}
               to="/register"
-              size="xl"
+              size="lg"
               color="brand"
               radius="xl"
+              className="landing-focus"
               rightSection={<ChevronRight size={20} aria-hidden="true" />}
             >
               Crear mi cuenta
