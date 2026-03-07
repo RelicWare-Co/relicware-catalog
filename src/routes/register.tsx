@@ -20,7 +20,7 @@ import { useEffect, useState } from "react";
 import { authClient } from "#/lib/auth-client";
 import { getServerSession } from "#/lib/session";
 
-export const Route = createFileRoute("/login")({
+export const Route = createFileRoute("/register")({
   validateSearch: (search: Record<string, unknown>) => ({
     redirect: typeof search.redirect === "string" ? search.redirect : undefined,
   }),
@@ -37,7 +37,7 @@ export const Route = createFileRoute("/login")({
 });
 
 function RouteComponent() {
-  const navigate = useNavigate({ from: "/login" });
+  const navigate = useNavigate({ from: "/register" });
   const search = Route.useSearch();
   const { data: session, isPending } = authClient.useSession();
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -45,14 +45,20 @@ function RouteComponent() {
   const form = useForm({
     mode: "uncontrolled",
     initialValues: {
+      name: "",
       email: "",
       password: "",
+      confirmPassword: "",
     },
     validate: {
+      name: (value) =>
+        value.trim().length >= 2 ? null : "Ingresa el nombre de tu negocio o tu nombre",
       email: (value) =>
         /^\S+@\S+$/.test(value.trim()) ? null : "Ingresa un correo válido",
       password: (value) =>
         value.length >= 8 ? null : "La contraseña debe tener al menos 8 caracteres",
+      confirmPassword: (value, values) =>
+        value === values.password ? null : "Las contraseñas no coinciden",
     },
   });
 
@@ -68,13 +74,14 @@ function RouteComponent() {
   const handleSubmit = form.onSubmit(async (values) => {
     setSubmitError(null);
 
-    const { error } = await authClient.signIn.email({
+    const { error } = await authClient.signUp.email({
+      name: values.name.trim(),
       email: values.email.trim(),
       password: values.password,
     });
 
     if (error) {
-      setSubmitError(error.message || "No se pudo iniciar sesión");
+      setSubmitError(error.message || "No se pudo crear la cuenta");
       return;
     }
 
@@ -107,13 +114,7 @@ function RouteComponent() {
   }
 
   return (
-    <Box
-      w="100%"
-      h="100vh"
-      display="flex"
-      bg="warm.1" // Referencia a nuestra paleta `warm` en el theme
-    >
-      {/* Left side: The functional form, clean, spacious, asymmetric */}
+    <Box w="100%" h="100vh" display="flex" bg="warm.1">
       <Flex
         flex={1}
         direction="column"
@@ -121,22 +122,22 @@ function RouteComponent() {
         align="center"
         p={{ base: "xl", md: 80 }}
       >
-        <Box w="100%" maw={400}>
+        <Box w="100%" maw={440}>
           <Title
             order={1}
             c="dark.8"
             mb={8}
             style={{ letterSpacing: "-0.02em" }}
           >
-            Tu negocio, digital
+            Crea tu espacio en Catalog
           </Title>
           <Text c="dimmed" fz="lg" mb={40}>
-            Ingresa a Catalog y empieza a compartir tus menús y catálogos con
-            tus clientes.
+            Abre tu cuenta para publicar tu catálogo, recibir leads y compartir
+            tus links desde un solo lugar.
           </Text>
 
           <form onSubmit={handleSubmit}>
-            <Stack gap="xl">
+            <Stack gap="lg">
               {submitError ? (
                 <Alert
                   color="red"
@@ -148,6 +149,14 @@ function RouteComponent() {
               ) : null}
 
               <TextInput
+                label="Nombre"
+                placeholder="Tu negocio o tu nombre"
+                autoComplete="name"
+                key={form.key("name")}
+                {...form.getInputProps("name")}
+              />
+
+              <TextInput
                 label="Correo electrónico"
                 placeholder="tu@negocio.com"
                 autoComplete="email"
@@ -157,10 +166,18 @@ function RouteComponent() {
 
               <PasswordInput
                 label="Contraseña"
-                placeholder="••••••••"
-                autoComplete="current-password"
+                placeholder="Mínimo 8 caracteres"
+                autoComplete="new-password"
                 key={form.key("password")}
                 {...form.getInputProps("password")}
+              />
+
+              <PasswordInput
+                label="Confirmar contraseña"
+                placeholder="Repite tu contraseña"
+                autoComplete="new-password"
+                key={form.key("confirmPassword")}
+                {...form.getInputProps("confirmPassword")}
               />
 
               <Button
@@ -171,51 +188,45 @@ function RouteComponent() {
                 mt={10}
                 loading={form.submitting}
               >
-                Iniciar sesión
+                Crear cuenta
               </Button>
             </Stack>
           </form>
 
           <Group justify="center" mt={32}>
             <Text fz="sm" c="dimmed">
-              ¿Aún no tienes cuenta?{" "}
+              ¿Ya tienes cuenta?{" "}
               <Anchor
-                href="/register"
+                href="/login"
                 c="brand.6"
                 fw={600}
                 style={{ textDecoration: "none" }}
               >
-                Crea tu catálogo gratis
+                Inicia sesión
               </Anchor>
             </Text>
           </Group>
         </Box>
       </Flex>
 
-      {/* Right side: Human connection, photography or soft organic elements */}
-      <Box
-        flex={1}
-        display={{ base: "none", lg: "block" }}
-        p={24} // Padding around the image container
-      >
+      <Box flex={1} display={{ base: "none", lg: "block" }} p={24}>
         <Box
           w="100%"
           h="100%"
           style={{
             borderRadius: 24,
             backgroundImage:
-              'url("https://images.unsplash.com/photo-1555396273-367ea4eb4db5?q=80&w=2674&auto=format&fit=crop")', // A welcoming, warm local business feeling
+              'url("https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?q=80&w=2670&auto=format&fit=crop")',
             backgroundSize: "cover",
             backgroundPosition: "center",
             position: "relative",
             overflow: "hidden",
           }}
         >
-          {/* Subtle overlay */}
           <Box
             pos="absolute"
             inset={0}
-            bg="linear-gradient(to top, rgba(42, 42, 42, 0.4) 0%, rgba(42, 42, 42, 0) 50%)"
+            bg="linear-gradient(to top, rgba(42, 42, 42, 0.52) 0%, rgba(42, 42, 42, 0.08) 55%)"
           />
 
           <Box pos="absolute" bottom={40} left={40} right={40} c="white">
@@ -227,15 +238,15 @@ function RouteComponent() {
                 textShadow: "0 2px 10px rgba(0,0,0,0.2)",
               }}
             >
-              "Nuestros clientes ahora piden el triple por WhatsApp desde que
-              usamos nuestro menú en Catalog."
+              "Pasamos de responder mensajes sueltos a tener todo el menú, los
+              horarios y las reservas en un solo sitio."
             </Title>
             <Text
               fz="lg"
               fw={500}
               style={{ textShadow: "0 1px 4px rgba(0,0,0,0.3)" }}
             >
-              — María A., Dueña de Restaurante y Panadería
+              — Equipo de Casa Nativa
             </Text>
           </Box>
         </Box>

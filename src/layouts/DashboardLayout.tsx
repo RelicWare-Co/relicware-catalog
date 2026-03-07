@@ -32,6 +32,9 @@ import {
   Users,
 } from "lucide-react";
 import type React from "react";
+import { useState } from "react";
+
+import { authClient } from "#/lib/auth-client";
 
 const navLinkStyles = (
   theme: MantineTheme,
@@ -84,8 +87,26 @@ export function DashboardLayout({ children }: { children?: React.ReactNode }) {
   const [opened, { toggle }] = useDisclosure();
   const [plansModalOpened, { open: openPlans, close: closePlans }] =
     useDisclosure();
-  // We use useLocation directly from tanstack router
   const location = useLocation();
+  const { data: session } = authClient.useSession();
+  const [isSigningOut, setIsSigningOut] = useState(false);
+
+  const displayName = session?.user.name || "Tu cuenta";
+  const displayEmail = session?.user.email || "";
+  const initials = displayName
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("") || "CA";
+
+  const handleSignOut = async () => {
+    setIsSigningOut(true);
+
+    await authClient.signOut();
+
+    window.location.replace("/login");
+  };
 
   const navItems = [
     { icon: LayoutDashboard, label: "Inicio", path: "/dashboard" },
@@ -148,14 +169,14 @@ export function DashboardLayout({ children }: { children?: React.ReactNode }) {
                 >
                   <Group gap="sm">
                     <Avatar radius="xl" color="brand" variant="light">
-                      MA
+                      {initials}
                     </Avatar>
                     <Stack gap={0} style={{ minWidth: 0 }}>
                       <Text size="sm" fw={600} c="dark.8">
-                        María A.
+                        {displayName}
                       </Text>
                       <Text size="xs" c="dimmed">
-                        Restaurante "El Sazón"
+                        {displayEmail}
                       </Text>
                     </Stack>
                   </Group>
@@ -174,11 +195,13 @@ export function DashboardLayout({ children }: { children?: React.ReactNode }) {
                 <Menu.Divider />
                 <Menu.Item
                   color="red"
+                  onClick={handleSignOut}
+                  disabled={isSigningOut}
                   leftSection={
                     <LogOut style={{ width: rem(16), height: rem(16) }} />
                   }
                 >
-                  Cerrar sesión
+                  {isSigningOut ? "Cerrando sesión..." : "Cerrar sesión"}
                 </Menu.Item>
               </Menu.Dropdown>
             </Menu>

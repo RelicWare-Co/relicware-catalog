@@ -15,6 +15,7 @@
     "check": "biome check",
     "db:generate": "bun drizzle-kit generate",
     "db:migrate": "bun drizzle-kit migrate",
+    "db:migrate:runtime": "bun run src/db/run-migrations.ts",
     "db:push": "bun drizzle-kit push",
     "db:pull": "bun drizzle-kit pull",
     "db:studio": "bun drizzle-kit studio"
