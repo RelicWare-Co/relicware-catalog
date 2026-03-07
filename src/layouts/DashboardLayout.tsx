@@ -480,6 +480,7 @@ export function DashboardLayout({ children }: { children?: React.ReactNode }) {
           radius="xl"
           padding="xl"
           centered
+          zIndex={1000}
           title={
             <Title order={3} c="dark.8" style={{ letterSpacing: "-0.02em" }}>
               Desbloquea todo el potencial

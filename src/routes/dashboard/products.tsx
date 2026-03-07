@@ -349,6 +349,10 @@ function ProductsPage() {
         onClose={productModal.close}
         title={editingItemId ? "Editar producto" : "Nuevo producto"}
         size="lg"
+        radius="lg"
+        centered
+        zIndex={1000}
+        overlayProps={{ backgroundOpacity: 0.4, blur: 2 }}
       >
         <form onSubmit={handleProductSubmit}>
           <Stack gap="md">
@@ -357,123 +361,87 @@ function ProductsPage() {
             <TextInput
               label="Nombre"
               placeholder="Ej: Latte frio"
-              value={productForm.values.name}
-              onChange={(event) =>
-                productForm.setFieldValue("name", event.currentTarget.value)
-              }
-              error={productForm.errors.name}
+              key={productForm.key("name")}
+              {...productForm.getInputProps("name")}
             />
 
             <TextInput
               label="Descripcion corta"
               placeholder="Resumen visible en el menu"
-              value={productForm.values.shortDescription}
-              onChange={(event) =>
-                productForm.setFieldValue(
-                  "shortDescription",
-                  event.currentTarget.value,
-                )
-              }
+              key={productForm.key("shortDescription")}
+              {...productForm.getInputProps("shortDescription")}
             />
 
-            <Group grow>
+            <Group grow align="flex-start">
               <Select
                 clearable
                 label="Categoria"
                 data={categoryOptions}
-                value={productForm.values.categoryId || null}
-                onChange={(value) =>
-                  productForm.setFieldValue("categoryId", value ?? "")
-                }
+                key={productForm.key("categoryId")}
+                {...productForm.getInputProps("categoryId")}
               />
 
               <Select
                 label="Estado"
                 data={itemStatusOptions}
-                value={productForm.values.status}
-                onChange={(value) =>
-                  productForm.setFieldValue("status", value ?? "draft")
-                }
                 allowDeselect={false}
+                key={productForm.key("status")}
+                {...productForm.getInputProps("status")}
               />
             </Group>
 
-            <Group grow>
+            <Group grow align="flex-start">
               <TextInput
                 label="Precio base"
                 placeholder="12000"
-                value={productForm.values.basePriceAmount}
-                onChange={(event) =>
-                  productForm.setFieldValue(
-                    "basePriceAmount",
-                    event.currentTarget.value,
-                  )
-                }
-                error={productForm.errors.basePriceAmount}
+                key={productForm.key("basePriceAmount")}
+                {...productForm.getInputProps("basePriceAmount")}
               />
               <TextInput
                 label="Inventario"
                 placeholder="25"
-                value={productForm.values.inventoryQuantity}
-                onChange={(event) =>
-                  productForm.setFieldValue(
-                    "inventoryQuantity",
-                    event.currentTarget.value,
-                  )
-                }
-                error={productForm.errors.inventoryQuantity}
+                key={productForm.key("inventoryQuantity")}
+                {...productForm.getInputProps("inventoryQuantity")}
               />
             </Group>
 
             <TextInput
               label="URL de imagen"
               placeholder="https://..."
-              value={productForm.values.imageUrl}
-              onChange={(event) =>
-                productForm.setFieldValue("imageUrl", event.currentTarget.value)
-              }
+              key={productForm.key("imageUrl")}
+              {...productForm.getInputProps("imageUrl")}
             />
 
             <Group grow>
               <Switch
                 label="Disponible"
-                checked={productForm.values.isAvailable}
-                onChange={(event) =>
-                  productForm.setFieldValue(
-                    "isAvailable",
-                    event.currentTarget.checked,
-                  )
-                }
+                key={productForm.key("isAvailable")}
+                {...productForm.getInputProps("isAvailable", { type: "checkbox" })}
               />
               <Switch
                 label="Destacado"
-                checked={productForm.values.isFeatured}
-                onChange={(event) =>
-                  productForm.setFieldValue(
-                    "isFeatured",
-                    event.currentTarget.checked,
-                  )
-                }
+                key={productForm.key("isFeatured")}
+                {...productForm.getInputProps("isFeatured", { type: "checkbox" })}
               />
               <Switch
                 label="Controlar inventario"
-                checked={productForm.values.trackInventory}
-                onChange={(event) =>
-                  productForm.setFieldValue(
-                    "trackInventory",
-                    event.currentTarget.checked,
-                  )
-                }
+                key={productForm.key("trackInventory")}
+                {...productForm.getInputProps("trackInventory", { type: "checkbox" })}
               />
             </Group>
 
-            <Button
-              type="submit"
-              color="brand.6"
-              loading={createItemMutation.isPending || updateItemMutation.isPending}
-            >
-              {editingItemId ? "Guardar cambios" : "Crear producto"}
-            </Button>
+            <Group justify="flex-end" mt="md">
+              <Button variant="subtle" color="gray" onClick={productModal.close}>
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                color="brand.6"
+                loading={createItemMutation.isPending || updateItemMutation.isPending}
+              >
+                {editingItemId ? "Guardar cambios" : "Crear producto"}
+              </Button>
+            </Group>
           </Stack>
         </form>
       </Modal>
@@ -531,28 +499,24 @@ function ProductsPage() {
               label="Buscar"
               placeholder="Nombre o descripcion"
               leftSection={<Search size={16} />}
-              value={filterForm.values.term}
-              onChange={(event) =>
-                filterForm.setFieldValue("term", event.currentTarget.value)
-              }
+              key={filterForm.key("term")}
+              {...filterForm.getInputProps("term")}
               style={{ flex: 1 }}
             />
             <Select
               clearable
               label="Categoria"
               data={categoryOptions}
-              value={filterForm.values.categoryId || null}
-              onChange={(value) =>
-                filterForm.setFieldValue("categoryId", value ?? "")
-              }
+              key={filterForm.key("categoryId")}
+              {...filterForm.getInputProps("categoryId")}
               style={{ flex: 1, minWidth: "min(100%, 220px)" }}
             />
             <Select
               clearable
               label="Estado"
               data={itemStatusOptions}
-              value={filterForm.values.status || null}
-              onChange={(value) => filterForm.setFieldValue("status", value ?? "")}
+              key={filterForm.key("status")}
+              {...filterForm.getInputProps("status")}
               style={{ flex: 1, minWidth: "min(100%, 180px)" }}
             />
             <Button type="submit" variant="default">

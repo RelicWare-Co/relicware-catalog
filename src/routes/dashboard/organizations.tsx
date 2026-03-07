@@ -639,6 +639,8 @@ function OrganizationsPage() {
         title="Nueva organización"
         radius="xl"
         centered
+        zIndex={1000}
+        overlayProps={{ backgroundOpacity: 0.4, blur: 2 }}
       >
         <form onSubmit={handleCreate}>
           <Stack gap="md">
@@ -679,6 +681,8 @@ function OrganizationsPage() {
         title="Editar organización activa"
         radius="xl"
         centered
+        zIndex={1000}
+        overlayProps={{ backgroundOpacity: 0.4, blur: 2 }}
       >
         <form onSubmit={handleUpdate}>
           <Stack gap="md">

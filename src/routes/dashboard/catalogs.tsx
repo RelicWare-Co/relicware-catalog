@@ -354,6 +354,10 @@ function CatalogsPage() {
         onClose={catalogModal.close}
         title={editingCatalogId ? "Editar catalogo" : "Nuevo catalogo"}
         size="lg"
+        radius="lg"
+        centered
+        zIndex={1000}
+        overlayProps={{ backgroundOpacity: 0.4, blur: 2 }}
       >
         <form onSubmit={handleCatalogSubmit}>
           <Stack gap="md">
@@ -362,59 +366,41 @@ function CatalogsPage() {
             <TextInput
               label="Nombre"
               placeholder="Ej: Menu principal"
-              value={catalogForm.values.name}
-              onChange={(event) =>
-                catalogForm.setFieldValue("name", event.currentTarget.value)
-              }
-              error={catalogForm.errors.name}
+              key={catalogForm.key("name")}
+              {...catalogForm.getInputProps("name")}
             />
 
             <TextInput
               label="Descripcion"
               placeholder="Que vende este catalogo"
-              value={catalogForm.values.description}
-              onChange={(event) =>
-                catalogForm.setFieldValue(
-                  "description",
-                  event.currentTarget.value,
-                )
-              }
+              key={catalogForm.key("description")}
+              {...catalogForm.getInputProps("description")}
             />
 
-            <Group grow>
+            <Group grow align="flex-start">
               <TextInput
                 label="Moneda"
                 placeholder="MXN"
                 maxLength={3}
-                value={catalogForm.values.currencyCode}
-                onChange={(event) =>
-                  catalogForm.setFieldValue(
-                    "currencyCode",
-                    event.currentTarget.value,
-                  )
-                }
-                error={catalogForm.errors.currencyCode}
+                key={catalogForm.key("currencyCode")}
+                {...catalogForm.getInputProps("currencyCode")}
               />
 
               <Select
                 label="Estado"
                 data={catalogStatusOptions}
-                value={catalogForm.values.status}
-                onChange={(value) =>
-                  catalogForm.setFieldValue("status", value ?? "draft")
-                }
                 allowDeselect={false}
+                key={catalogForm.key("status")}
+                {...catalogForm.getInputProps("status")}
               />
             </Group>
 
             <Select
               label="Modo de precio"
               data={priceDisplayModeOptions}
-              value={catalogForm.values.priceDisplayMode}
-              onChange={(value) =>
-                catalogForm.setFieldValue("priceDisplayMode", value ?? "exact")
-              }
               allowDeselect={false}
+              key={catalogForm.key("priceDisplayMode")}
+              {...catalogForm.getInputProps("priceDisplayMode")}
             />
 
             <Group grow>
@@ -422,19 +408,15 @@ function CatalogsPage() {
                 clearable
                 label="Sitio asociado"
                 data={siteOptions}
-                value={catalogForm.values.siteId || null}
-                onChange={(value) =>
-                  catalogForm.setFieldValue("siteId", value ?? "")
-                }
+                key={catalogForm.key("siteId")}
+                {...catalogForm.getInputProps("siteId")}
               />
               <Select
                 clearable
                 label="Sede"
                 data={locationOptions}
-                value={catalogForm.values.locationId || null}
-                onChange={(value) =>
-                  catalogForm.setFieldValue("locationId", value ?? "")
-                }
+                key={catalogForm.key("locationId")}
+                {...catalogForm.getInputProps("locationId")}
               />
             </Group>
 
@@ -442,27 +424,28 @@ function CatalogsPage() {
               clearable
               label="Tema de marca"
               data={themeOptions}
-              value={catalogForm.values.brandThemeId || null}
-              onChange={(value) =>
-                catalogForm.setFieldValue("brandThemeId", value ?? "")
-              }
+              key={catalogForm.key("brandThemeId")}
+              {...catalogForm.getInputProps("brandThemeId")}
             />
 
             <Switch
               label="Visible al publico"
-              checked={catalogForm.values.isPublic}
-              onChange={(event) =>
-                catalogForm.setFieldValue("isPublic", event.currentTarget.checked)
-              }
+              key={catalogForm.key("isPublic")}
+              {...catalogForm.getInputProps("isPublic", { type: "checkbox" })}
             />
 
-            <Button
-              type="submit"
-              color="brand.6"
-              loading={catalogMutation.isPending || updateCatalogMutation.isPending}
-            >
-              {editingCatalogId ? "Guardar cambios" : "Crear catalogo"}
-            </Button>
+            <Group justify="flex-end" mt="md">
+              <Button variant="subtle" color="gray" onClick={catalogModal.close}>
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                color="brand.6"
+                loading={catalogMutation.isPending || updateCatalogMutation.isPending}
+              >
+                {editingCatalogId ? "Guardar cambios" : "Crear catalogo"}
+              </Button>
+            </Group>
           </Stack>
         </form>
       </Modal>
@@ -471,6 +454,10 @@ function CatalogsPage() {
         opened={categoryModalOpened}
         onClose={categoryModal.close}
         title="Nueva categoria"
+        radius="lg"
+        centered
+        zIndex={1000}
+        overlayProps={{ backgroundOpacity: 0.4, blur: 2 }}
       >
         <form onSubmit={handleCategorySubmit}>
           <Stack gap="md">
@@ -479,53 +466,43 @@ function CatalogsPage() {
             <TextInput
               label="Nombre"
               placeholder="Ej: Bebidas frias"
-              value={categoryForm.values.name}
-              onChange={(event) =>
-                categoryForm.setFieldValue("name", event.currentTarget.value)
-              }
-              error={categoryForm.errors.name}
+              key={categoryForm.key("name")}
+              {...categoryForm.getInputProps("name")}
             />
 
             <TextInput
               label="Descripcion"
               placeholder="Opcional"
-              value={categoryForm.values.description}
-              onChange={(event) =>
-                categoryForm.setFieldValue(
-                  "description",
-                  event.currentTarget.value,
-                )
-              }
+              key={categoryForm.key("description")}
+              {...categoryForm.getInputProps("description")}
             />
 
             <Select
               clearable
               label="Categoria padre"
               data={categoryOptions}
-              value={categoryForm.values.parentCategoryId || null}
-              onChange={(value) =>
-                categoryForm.setFieldValue("parentCategoryId", value ?? "")
-              }
+              key={categoryForm.key("parentCategoryId")}
+              {...categoryForm.getInputProps("parentCategoryId")}
             />
 
             <Switch
               label="Visible en el catalogo"
-              checked={categoryForm.values.isVisible}
-              onChange={(event) =>
-                categoryForm.setFieldValue(
-                  "isVisible",
-                  event.currentTarget.checked,
-                )
-              }
+              key={categoryForm.key("isVisible")}
+              {...categoryForm.getInputProps("isVisible", { type: "checkbox" })}
             />
 
-            <Button
-              type="submit"
-              color="brand.6"
-              loading={createCategoryMutation.isPending}
-            >
-              Crear categoria
-            </Button>
+            <Group justify="flex-end" mt="md">
+              <Button variant="subtle" color="gray" onClick={categoryModal.close}>
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                color="brand.6"
+                loading={createCategoryMutation.isPending}
+              >
+                Crear categoria
+              </Button>
+            </Group>
           </Stack>
         </form>
       </Modal>
