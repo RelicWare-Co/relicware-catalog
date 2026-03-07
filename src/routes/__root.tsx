@@ -1,3 +1,4 @@
+import { ColorSchemeScript, MantineProvider } from '@mantine/core';
 import { TanStackDevtools } from "@tanstack/react-devtools";
 import type { QueryClient } from "@tanstack/react-query";
 import {
@@ -6,12 +7,12 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
-
-import { MantineProvider, ColorSchemeScript } from '@mantine/core';
 import '@mantine/core/styles.css';
 
 import TanStackQueryDevtools from "../integrations/tanstack-query/devtools";
 import TanStackQueryProvider from "../integrations/tanstack-query/root-provider";
+
+import { theme } from '../theme';
 
 interface MyRouterContext {
   queryClient: QueryClient;
@@ -43,7 +44,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        <MantineProvider>
+        <MantineProvider theme={theme}>
           <TanStackQueryProvider>
             {children}
             <TanStackDevtools
