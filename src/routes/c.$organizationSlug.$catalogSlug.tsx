@@ -8,16 +8,17 @@ import {
   Group,
   Image,
   MantineProvider,
+  Modal,
   SimpleGrid,
   Stack,
   Text,
   Title,
 } from "@mantine/core";
-import { useReducedMotion } from "@mantine/hooks";
+import { useDisclosure, useReducedMotion } from "@mantine/hooks";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { MessageCircle } from "lucide-react";
-import { type CSSProperties, useMemo } from "react";
+import { MessageCircle, ShoppingBag, X } from "lucide-react";
+import { type CSSProperties, useMemo, useState } from "react";
 
 import { orpc } from "#/orpc/client";
 
@@ -47,8 +48,10 @@ type CatalogItem = {
   id: string;
   name: string;
   imageUrl: string | null;
+  gallery?: string[] | null;
   isFeatured: boolean;
   shortDescription: string | null;
+  description?: string | null;
   basePriceAmount: number | null;
 };
 
@@ -65,11 +68,17 @@ const publicCatalogQueryOptions = (
   organizationSlug: string,
   catalogSlug: string,
 ) =>
-  orpc.operations.getPublicCatalog.queryOptions({
-    input: {
-      organizationSlug,
-      catalogSlug,
-    },
+  ({
+    ...orpc.operations.getPublicCatalog.queryOptions({
+      input: {
+        organizationSlug,
+        catalogSlug,
+      },
+    }),
+    staleTime: 0,
+    refetchOnMount: "always" as const,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
   });
 
 const formatMoney = (amount: number | null, currencyCode: string) => {
@@ -83,7 +92,7 @@ const formatMoney = (amount: number | null, currencyCode: string) => {
 
 export const Route = createFileRoute("/c/$organizationSlug/$catalogSlug")({
   loader: async ({ context, params }) => {
-    await context.queryClient.ensureQueryData(
+    await context.queryClient.fetchQuery(
       publicCatalogQueryOptions(params.organizationSlug, params.catalogSlug),
     );
   },
@@ -100,6 +109,9 @@ export const Route = createFileRoute("/c/$organizationSlug/$catalogSlug")({
 function PublicCatalogPage() {
   const params = Route.useParams();
   const reducedMotion = useReducedMotion();
+  const [opened, { open, close }] = useDisclosure(false);
+  const [selectedItem, setSelectedItem] = useState<CatalogItem | null>(null);
+
   const { data } = useSuspenseQuery(
     publicCatalogQueryOptions(params.organizationSlug, params.catalogSlug),
   );
@@ -297,6 +309,10 @@ function PublicCatalogPage() {
                         brandTheme={brandTheme}
                         animationIndex={categoryIndex * 3 + itemIndex}
                         reducedMotion={reducedMotion}
+                        onClick={() => {
+                          setSelectedItem(item);
+                          open();
+                        }}
                       />
                     ))}
                   </SimpleGrid>
@@ -319,6 +335,10 @@ function PublicCatalogPage() {
                       brandTheme={brandTheme}
                       animationIndex={categories.length * 3 + itemIndex}
                       reducedMotion={reducedMotion}
+                      onClick={() => {
+                        setSelectedItem(item);
+                        open();
+                      }}
                     />
                   ))}
                 </SimpleGrid>
@@ -363,6 +383,92 @@ function PublicCatalogPage() {
           </Stack>
         </Container>
 
+        <Modal
+          opened={opened}
+          onClose={close}
+          size="lg"
+          padding="xl"
+          radius={borderRadius}
+          withCloseButton={false}
+          centered
+          styles={{
+            content: { backgroundColor: colors.surface, color: colors.text },
+          }}
+        >
+          {selectedItem && (
+            <Stack gap="lg">
+              <Group justify="space-between" align="flex-start" wrap="nowrap">
+                <Title order={3} size="h3" style={{ lineHeight: 1.2 }}>
+                  {selectedItem.name}
+                </Title>
+                <button
+                  type="button"
+                  onClick={close}
+                  style={{
+                    cursor: "pointer",
+                    display: "flex",
+                    background: "none",
+                    border: "none",
+                    padding: 0,
+                  }}
+                  aria-label="Cerrar modal"
+                >
+                  <X size={24} color={colors.mutedText} />
+                </button>
+              </Group>
+
+              {(selectedItem.imageUrl || (selectedItem.gallery && selectedItem.gallery.length > 0)) && (
+                <Box style={{ overflow: "hidden", borderRadius: borderRadius }}>
+                  <Image
+                    src={selectedItem.imageUrl || selectedItem.gallery?.[0] || ""}
+                    alt={selectedItem.name}
+                    height={300}
+                    fit="cover"
+                  />
+                </Box>
+              )}
+
+              {selectedItem.description && (
+                <Text style={{ whiteSpace: "pre-wrap", color: colors.text }}>
+                  {selectedItem.description}
+                </Text>
+              )}
+              
+              {!selectedItem.description && selectedItem.shortDescription && (
+                <Text style={{ whiteSpace: "pre-wrap", color: colors.text }}>
+                  {selectedItem.shortDescription}
+                </Text>
+              )}
+
+              <Group justify="space-between" align="center" mt="md">
+                {catalog.priceDisplayMode !== "hidden" && selectedItem.basePriceAmount ? (
+                  <Text fw={800} size="xl" style={{ color: colors.primary }}>
+                    {catalog.priceDisplayMode === "starting_at" ? "Desde " : ""}
+                    {formatMoney(selectedItem.basePriceAmount, catalog.currencyCode)}
+                  </Text>
+                ) : (
+                  <div />
+                )}
+                
+                <Button
+                  component="a"
+                  href={`https://wa.me/?text=${encodeURIComponent(`Hola, me interesa el producto: ${selectedItem.name}`)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  leftSection={<ShoppingBag size={18} />}
+                  style={{
+                    backgroundColor: colors.primary,
+                    color: "#f8f8f6",
+                    borderRadius: borderRadius,
+                  }}
+                >
+                  Pedir producto
+                </Button>
+              </Group>
+            </Stack>
+          )}
+        </Modal>
+
         <style>{`
           .catalog-cover {
             transform-origin: center;
@@ -376,7 +482,7 @@ function PublicCatalogPage() {
 
           .catalog-card:hover {
             transform: translate3d(0, -6px, 0);
-            box-shadow: 0 16px 32px rgba(0, 0, 0, 0.12) !important;
+            box-shadow: var(--catalog-card-hover-shadow, 0 16px 32px rgba(0, 0, 0, 0.12));
           }
 
           .catalog-whatsapp-button {
@@ -468,6 +574,7 @@ function CatalogItemCard({
   brandTheme,
   animationIndex,
   reducedMotion,
+  onClick,
 }: {
   item: CatalogItem;
   catalog: PublicCatalog;
@@ -475,18 +582,26 @@ function CatalogItemCard({
   brandTheme: BrandThemeConfig | null;
   animationIndex: number;
   reducedMotion: boolean;
+  onClick: () => void;
 }) {
   const price =
     catalog.priceDisplayMode !== "hidden"
       ? formatMoney(item.basePriceAmount, catalog.currencyCode)
     : null;
 
+  const cardHoverShadow =
+    brandTheme?.cardStyle === "flat" || brandTheme?.cardStyle === "outlined"
+      ? "none"
+      : "0 16px 32px rgba(0, 0, 0, 0.12)";
+
   return (
     <Card
       className="catalog-card"
       p="md"
       radius="var(--catalog-radius)"
+      onClick={onClick}
       style={{
+        cursor: "pointer",
         backgroundColor: "var(--catalog-surface)",
         border:
           brandTheme?.cardStyle === "flat"
@@ -498,6 +613,7 @@ function CatalogItemCard({
           brandTheme?.cardStyle === "elevated" || !brandTheme?.cardStyle
             ? "0 8px 30px rgba(0, 0, 0, 0.04)"
             : "none",
+        "--catalog-card-hover-shadow": cardHoverShadow,
         transition:
           "transform 220ms var(--catalog-ease-out-quart), box-shadow 220ms var(--catalog-ease-out-quart)",
         height: "100%",

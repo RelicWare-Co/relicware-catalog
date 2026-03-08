@@ -2,24 +2,51 @@ import {
   Box,
   Button,
   Card,
+  Center,
   ColorInput,
   Divider,
   Group,
+  Loader,
   Select,
   SimpleGrid,
   Stack,
   Text,
   Title,
 } from "@mantine/core";
+import { notifications } from "@mantine/notifications";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { MessageCircle } from "lucide-react";
-import { useState } from "react";
+import { MessageCircle, Save } from "lucide-react";
+import { useEffect, useState } from "react";
+
+import { getErrorMessage } from "#/lib/get-error-message";
+import { orpc } from "#/orpc/client";
 
 export const Route = createFileRoute("/dashboard/appearance")({
   component: AppearancePage,
 });
 
 function AppearancePage() {
+  const queryClient = useQueryClient();
+
+  const syncThemeQueries = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: orpc.site.key() }),
+      queryClient.invalidateQueries({ queryKey: orpc.operations.key() }),
+      queryClient.refetchQueries({
+        queryKey: orpc.site.listThemes.queryKey({ input: { limit: 100 } }),
+      }),
+    ]);
+  };
+
+  const { data: themesResult, isLoading } = useQuery(
+    orpc.site.listThemes.queryOptions({ input: { limit: 100 } })
+  );
+
+  const activeTheme =
+    themesResult?.items?.find((item) => item.isDefault) ??
+    themesResult?.items?.[0];
+
   const [theme, setTheme] = useState({
     primaryColor: "#09090b",
     backgroundColor: "#fafafa",
@@ -27,6 +54,89 @@ function AppearancePage() {
     cardStyle: "elevated",
     borderRadius: "lg",
   });
+
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
+
+  useEffect(() => {
+    if (activeTheme && !isDataLoaded) {
+      setTheme({
+        primaryColor: activeTheme.primaryColor || "#09090b",
+        backgroundColor: activeTheme.backgroundColor || "#fafafa",
+        textColor: activeTheme.textColor || "#18181b",
+        cardStyle: activeTheme.cardStyle || "elevated",
+        borderRadius: activeTheme.borderRadius || "lg",
+      });
+      setIsDataLoaded(true);
+    } else if (!activeTheme && themesResult && !isDataLoaded) {
+      // Finished loading, no theme
+      setIsDataLoaded(true);
+    }
+  }, [activeTheme, themesResult, isDataLoaded]);
+
+  const updateMutation = useMutation(
+    orpc.site.updateTheme.mutationOptions({
+      onSuccess: async () => {
+        await syncThemeQueries();
+        notifications.show({
+          title: "Tema actualizado",
+          message: "Los cambios se han guardado exitosamente.",
+          color: "teal",
+        });
+      },
+      onError: (err) => {
+        notifications.show({
+          title: "Error al guardar",
+          message: getErrorMessage(err, "Ha ocurrido un error."),
+          color: "red",
+        });
+      },
+    })
+  );
+
+  const createMutation = useMutation(
+    orpc.site.createTheme.mutationOptions({
+      onSuccess: async () => {
+        await syncThemeQueries();
+        notifications.show({
+          title: "Tema guardado",
+          message: "Los cambios se han guardado exitosamente.",
+          color: "teal",
+        });
+      },
+      onError: (err) => {
+        notifications.show({
+          title: "Error al guardar",
+          message: getErrorMessage(err, "Ha ocurrido un error."),
+          color: "red",
+        });
+      },
+    })
+  );
+
+  const handleSave = () => {
+    const payload = {
+      primaryColor: theme.primaryColor,
+      backgroundColor: theme.backgroundColor,
+      textColor: theme.textColor,
+      cardStyle: theme.cardStyle as "elevated" | "outlined" | "flat",
+      borderRadius: theme.borderRadius as "none" | "sm" | "md" | "lg" | "xl" | "full",
+    };
+
+    if (activeTheme) {
+      updateMutation.mutate({
+        id: activeTheme.id,
+        ...payload,
+      });
+    } else {
+      createMutation.mutate({
+        ...payload,
+        name: "Principal",
+        isDefault: true,
+      });
+    }
+  };
+
+  const isSaving = updateMutation.isPending || createMutation.isPending;
 
   const getRadiusAttr = (radius: string) => {
     switch (radius) {
@@ -53,6 +163,14 @@ function AppearancePage() {
   const cardShadow =
     theme.cardStyle === "elevated" ? "0 8px 30px rgba(0,0,0,0.04)" : "none";
 
+  if (isLoading) {
+    return (
+      <Center h={300}>
+        <Loader />
+      </Center>
+    );
+  }
+
   return (
     <Stack gap="xl">
       <Group justify="space-between" align="flex-start">
@@ -64,7 +182,14 @@ function AppearancePage() {
             Personaliza cómo se ve tu catálogo para tus clientes.
           </Text>
         </div>
-        <Button color="brand">Guardar Cambios</Button>
+        <Button
+          color="brand"
+          leftSection={<Save size={16} />}
+          loading={isSaving}
+          onClick={handleSave}
+        >
+          Guardar Cambios
+        </Button>
       </Group>
 
       <SimpleGrid cols={{ base: 1, lg: 2 }} spacing="xl">

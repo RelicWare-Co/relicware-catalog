@@ -418,10 +418,12 @@ export const getPublicCatalog = publicProcedure
           updatedAt: catalogs.updatedAt,
         },
         brandTheme: brandThemes,
+        siteBrandThemeId: sites.brandThemeId,
       })
       .from(catalogs)
       .innerJoin(organization, eq(organization.id, catalogs.organizationId))
       .leftJoin(brandThemes, eq(brandThemes.id, catalogs.brandThemeId))
+      .leftJoin(sites, eq(sites.id, catalogs.siteId))
       .where(
         and(
           eq(organization.slug, input.organizationSlug),
@@ -435,8 +437,48 @@ export const getPublicCatalog = publicProcedure
     if (!result) {
       notFound("No se encontró un catálogo público con esos datos.");
     }
-    
-    const { catalog, brandTheme } = result;
+
+    const { catalog, brandTheme, siteBrandThemeId } = result;
+
+    const siteBrandTheme = siteBrandThemeId
+      ? (
+          await db
+            .select()
+            .from(brandThemes)
+            .where(
+              and(
+                eq(brandThemes.id, siteBrandThemeId),
+                eq(brandThemes.organizationId, catalog.organizationId),
+              ),
+            )
+            .limit(1)
+        )[0] ?? null
+      : null;
+
+    const defaultOrganizationTheme = (
+      await db
+        .select()
+        .from(brandThemes)
+        .where(
+          and(
+            eq(brandThemes.organizationId, catalog.organizationId),
+            eq(brandThemes.isDefault, true),
+          ),
+        )
+        .limit(1)
+    )[0] ?? null;
+
+    const anyOrganizationTheme = (
+      await db
+        .select()
+        .from(brandThemes)
+        .where(eq(brandThemes.organizationId, catalog.organizationId))
+        .orderBy(asc(brandThemes.name))
+        .limit(1)
+    )[0] ?? null;
+
+    const resolvedBrandTheme =
+      brandTheme || siteBrandTheme || defaultOrganizationTheme || anyOrganizationTheme;
 
     const categories = await db
       .select()
@@ -461,7 +503,7 @@ export const getPublicCatalog = publicProcedure
       )
       .orderBy(asc(catalogItems.sortOrder));
 
-    return { catalog, brandTheme, categories, items };
+    return { catalog, brandTheme: resolvedBrandTheme, categories, items };
   });
 
 export const createLeadRequest = publicProcedure
