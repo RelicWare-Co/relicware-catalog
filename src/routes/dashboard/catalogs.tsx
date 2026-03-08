@@ -120,13 +120,14 @@ function CatalogsPage() {
   const [categoryError, setCategoryError] = useState<string | null>(null);
   const [shareFeedback, setShareFeedback] = useState<string | null>(null);
   const [editingCatalogId, setEditingCatalogId] = useState<string | null>(null);
+  const modalSelectComboboxProps = { withinPortal: false } as const;
 
   const catalogForm = useForm<CatalogFormValues>({
     mode: "controlled",
     initialValues: {
       name: "",
       description: "",
-      currencyCode: "MXN",
+      currencyCode: "COP",
       status: "draft",
       priceDisplayMode: "exact",
       siteId: "",
@@ -225,7 +226,7 @@ function CatalogsPage() {
     catalogForm.setValues({
       name: "",
       description: "",
-      currencyCode: "MXN",
+      currencyCode: "COP",
       status: "draft",
       priceDisplayMode: "exact",
       siteId: "",
@@ -380,7 +381,7 @@ function CatalogsPage() {
             <Group grow align="flex-start">
               <TextInput
                 label="Moneda"
-                placeholder="MXN"
+                placeholder="COP"
                 maxLength={3}
                 key={catalogForm.key("currencyCode")}
                 {...catalogForm.getInputProps("currencyCode")}
@@ -390,8 +391,12 @@ function CatalogsPage() {
                 label="Estado"
                 data={catalogStatusOptions}
                 allowDeselect={false}
-                key={catalogForm.key("status")}
-                {...catalogForm.getInputProps("status")}
+                value={catalogForm.values.status}
+                onChange={(value) => {
+                  catalogForm.setFieldValue("status", value ?? "draft");
+                }}
+                error={catalogForm.errors.status}
+                comboboxProps={modalSelectComboboxProps}
               />
             </Group>
 
@@ -399,8 +404,12 @@ function CatalogsPage() {
               label="Modo de precio"
               data={priceDisplayModeOptions}
               allowDeselect={false}
-              key={catalogForm.key("priceDisplayMode")}
-              {...catalogForm.getInputProps("priceDisplayMode")}
+              value={catalogForm.values.priceDisplayMode}
+              onChange={(value) => {
+                catalogForm.setFieldValue("priceDisplayMode", value ?? "exact");
+              }}
+              error={catalogForm.errors.priceDisplayMode}
+              comboboxProps={modalSelectComboboxProps}
             />
 
             <Group grow>
@@ -408,15 +417,25 @@ function CatalogsPage() {
                 clearable
                 label="Sitio asociado"
                 data={siteOptions}
-                key={catalogForm.key("siteId")}
-                {...catalogForm.getInputProps("siteId")}
+                value={catalogForm.values.siteId || null}
+                onChange={(value) => {
+                  catalogForm.setFieldValue("siteId", value ?? "");
+                }}
+                error={catalogForm.errors.siteId}
+                comboboxProps={modalSelectComboboxProps}
+                nothingFoundMessage="No hay sitios disponibles"
               />
               <Select
                 clearable
                 label="Sede"
                 data={locationOptions}
-                key={catalogForm.key("locationId")}
-                {...catalogForm.getInputProps("locationId")}
+                value={catalogForm.values.locationId || null}
+                onChange={(value) => {
+                  catalogForm.setFieldValue("locationId", value ?? "");
+                }}
+                error={catalogForm.errors.locationId}
+                comboboxProps={modalSelectComboboxProps}
+                nothingFoundMessage="No hay sedes disponibles"
               />
             </Group>
 
@@ -424,8 +443,13 @@ function CatalogsPage() {
               clearable
               label="Tema de marca"
               data={themeOptions}
-              key={catalogForm.key("brandThemeId")}
-              {...catalogForm.getInputProps("brandThemeId")}
+              value={catalogForm.values.brandThemeId || null}
+              onChange={(value) => {
+                catalogForm.setFieldValue("brandThemeId", value ?? "");
+              }}
+              error={catalogForm.errors.brandThemeId}
+              comboboxProps={modalSelectComboboxProps}
+              nothingFoundMessage="No hay temas disponibles"
             />
 
             <Switch
@@ -481,8 +505,13 @@ function CatalogsPage() {
               clearable
               label="Categoria padre"
               data={categoryOptions}
-              key={categoryForm.key("parentCategoryId")}
-              {...categoryForm.getInputProps("parentCategoryId")}
+              value={categoryForm.values.parentCategoryId || null}
+              onChange={(value) => {
+                categoryForm.setFieldValue("parentCategoryId", value ?? "");
+              }}
+              error={categoryForm.errors.parentCategoryId}
+              comboboxProps={modalSelectComboboxProps}
+              nothingFoundMessage="No hay categorias disponibles"
             />
 
             <Switch
@@ -553,6 +582,7 @@ function CatalogsPage() {
             placeholder="Selecciona un catalogo"
             data={catalogOptions}
             value={selectedCatalogId}
+            allowDeselect={false}
             onChange={(value) => {
               startTransition(() => {
                 navigate({

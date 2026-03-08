@@ -343,7 +343,8 @@ function AppearancePage() {
                       borderRadius: borderRadius,
                       border: cardBorder,
                       boxShadow: cardShadow,
-                      transition: "all 200ms ease",
+                      transition:
+                        "border-radius 200ms ease, box-shadow 200ms ease, border-color 200ms ease",
                     }}
                   >
                     <Group wrap="nowrap" align="flex-start">
@@ -393,7 +394,8 @@ function AppearancePage() {
                     backgroundColor: theme.primaryColor,
                     color: "#fafafa",
                     borderRadius: borderRadius,
-                    transition: "all 200ms ease",
+                    transition:
+                      "background-color 200ms ease, color 200ms ease, border-radius 200ms ease",
                   }}
                 >
                   Pedir por WhatsApp

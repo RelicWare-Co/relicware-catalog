@@ -11,12 +11,18 @@ const config = defineConfig({
     devtools(),
     tsconfigPaths({ projects: ["./tsconfig.json"] }),
     tailwindcss(),
-    nitro({ preset: "bun"}),
+    nitro({ preset: "bun" }),
     tanstackStart(),
     viteReact(),
   ],
   build: {
     rollupOptions: {
+      onLog(level, log, handler) {
+        if (log.code === "MODULE_LEVEL_DIRECTIVE") {
+          return;
+        }
+        handler(level, log);
+      },
       output: {
         assetFileNames: (assetInfo) => {
           // Elimina el hash específicamente para el css global

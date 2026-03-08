@@ -175,7 +175,7 @@ export const createCatalogSchema = z.object({
   name: trimmedString.min(1).max(120),
   slug: trimmedString.min(1).max(140).optional(),
   description: nullableText,
-  currencyCode: trimmedString.length(3).default("MXN"),
+  currencyCode: trimmedString.length(3).default("COP"),
   status: z.enum(catalogStatusValues).default("draft"),
   priceDisplayMode: z.enum(priceDisplayModeValues).default("exact"),
   coverImageUrl: z.string().url().nullable().optional(),

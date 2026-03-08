@@ -238,7 +238,6 @@ export function DashboardLayout({ children }: { children?: React.ReactNode }) {
                   style={{
                     borderRadius: "var(--mantine-radius-md)",
                     backgroundColor: "var(--mantine-color-white)",
-                    border: "1px solid var(--mantine-color-warm-3)",
                   }}
                 >
                   <Group gap="sm" wrap="nowrap">

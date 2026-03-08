@@ -263,7 +263,7 @@ export const catalogs = sqliteTable(
     name: text("name").notNull(),
     slug: text("slug").notNull(),
     description: text("description"),
-    currencyCode: text("currency_code").notNull().default("MXN"),
+    currencyCode: text("currency_code").notNull().default("COP"),
     status: text("status", { enum: ["draft", "active", "archived"] })
       .notNull()
       .default("draft"),
