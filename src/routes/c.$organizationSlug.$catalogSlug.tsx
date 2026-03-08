@@ -1,23 +1,65 @@
 import {
-  Alert,
   Badge,
   Box,
   Button,
   Card,
   Container,
-  Divider,
+  createTheme,
   Group,
+  Image,
+  MantineProvider,
   SimpleGrid,
   Stack,
   Text,
-  ThemeIcon,
   Title,
 } from "@mantine/core";
+import { useReducedMotion } from "@mantine/hooks";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, CircleAlert, MapPin, MessageCircle, Sparkles } from "lucide-react";
+import { createFileRoute } from "@tanstack/react-router";
+import { MessageCircle } from "lucide-react";
+import { type CSSProperties, useMemo } from "react";
 
 import { orpc } from "#/orpc/client";
+
+type BrandColorTuple = [
+  string,
+  string,
+  string,
+  string,
+  string,
+  string,
+  string,
+  string,
+  string,
+  string,
+];
+
+type CatalogColors = {
+  primary: string;
+  background: string;
+  surface: string;
+  text: string;
+  mutedText: string;
+  accent: string;
+};
+
+type CatalogItem = {
+  id: string;
+  name: string;
+  imageUrl: string | null;
+  isFeatured: boolean;
+  shortDescription: string | null;
+  basePriceAmount: number | null;
+};
+
+type PublicCatalog = {
+  priceDisplayMode: "hidden" | "starting_at" | "exact";
+  currencyCode: string;
+};
+
+type BrandThemeConfig = {
+  cardStyle: "flat" | "outlined" | "elevated" | null;
+};
 
 const publicCatalogQueryOptions = (
   organizationSlug: string,
@@ -31,10 +73,7 @@ const publicCatalogQueryOptions = (
   });
 
 const formatMoney = (amount: number | null, currencyCode: string) => {
-  if (amount === null) {
-    return null;
-  }
-
+  if (amount == null) return null;
   return new Intl.NumberFormat("es-CO", {
     style: "currency",
     currency: currencyCode,
@@ -60,269 +99,464 @@ export const Route = createFileRoute("/c/$organizationSlug/$catalogSlug")({
 
 function PublicCatalogPage() {
   const params = Route.useParams();
+  const reducedMotion = useReducedMotion();
   const { data } = useSuspenseQuery(
     publicCatalogQueryOptions(params.organizationSlug, params.catalogSlug),
   );
 
-  const categories = data.categories;
-  const itemsByCategory = new Map(
-    categories.map((category) => [
-      category.id,
-      data.items.filter((item) => item.categoryId === category.id),
-    ]),
+  const { catalog, brandTheme, categories, items } = data;
+
+  const itemsByCategory = useMemo(() => {
+    return new Map(
+      categories.map((category) => [
+        category.id,
+        items.filter((item) => item.categoryId === category.id),
+      ]),
+    );
+  }, [categories, items]);
+
+  const uncategorizedItems = useMemo(
+    () => items.filter((item) => !item.categoryId),
+    [items],
   );
-  const uncategorizedItems = data.items.filter((item) => !item.categoryId);
+
+  const colors = {
+    primary: brandTheme?.primaryColor || "#09090b",
+    background: brandTheme?.backgroundColor || "#fafafa",
+    surface: brandTheme?.surfaceColor || "#ffffff",
+    text: brandTheme?.textColor || "#18181b",
+    mutedText: brandTheme?.mutedTextColor || "#71717a",
+    accent: brandTheme?.accentColor || brandTheme?.primaryColor || "#3f3f46",
+  };
+
+  const getRadiusAttr = (radius: string | null | undefined) => {
+    switch (radius) {
+      case "none": return "0px";
+      case "sm": return "4px";
+      case "md": return "8px";
+      case "lg": return "12px";
+      case "xl": return "20px";
+      case "full": return "999px";
+      default: return "12px";
+    }
+  };
+
+  const borderRadius = getRadiusAttr(brandTheme?.borderRadius);
+
+  const getEnterMotionStyle = (
+    index: number,
+    startDelay = 120,
+  ): CSSProperties => {
+    if (reducedMotion) {
+      return {
+        opacity: 1,
+        transform: "none",
+      };
+    }
+
+    return {
+      opacity: 0,
+      transform: "translate3d(0, 18px, 0)",
+      animation: "catalog-enter 620ms var(--catalog-ease-out-expo) forwards",
+      animationDelay: `${startDelay + index * 90}ms`,
+      willChange: "transform, opacity",
+    };
+  };
+  
+  const customTheme = createTheme({
+    primaryColor: "brand",
+    colors: {
+      brand: [
+        colors.primary,
+        colors.primary,
+        colors.primary,
+        colors.primary,
+        colors.primary,
+        colors.primary,
+        colors.primary,
+        colors.primary,
+        colors.primary,
+        colors.primary,
+      ] as BrandColorTuple,
+    },
+    fontFamily: brandTheme?.fontBody || "Inter, system-ui, sans-serif",
+    headings: {
+      fontFamily: brandTheme?.fontHeading || brandTheme?.fontBody || "Inter, system-ui, sans-serif",
+    },
+  });
 
   return (
-    <Box
-      mih="100dvh"
-      py={{ base: 40, md: 72 }}
-      style={{
-        background:
-          "radial-gradient(circle at top, rgba(250, 227, 213, 0.8), transparent 28%), linear-gradient(180deg, #fffdfa 0%, #f9f6f0 100%)",
-      }}
-    >
-      <Container size="lg">
-        <Stack gap="xl">
-          <Group justify="space-between" align="flex-start">
-            <Stack gap="sm">
-              <Button
-                component={Link}
-                to="/"
-                variant="subtle"
-                color="dark"
-                leftSection={<ArrowLeft size={16} />}
-                px={0}
-                style={{ alignSelf: "flex-start" }}
-              >
-                Volver al inicio
-              </Button>
+    <MantineProvider theme={customTheme}>
+      <Box
+        className="catalog-page"
+        mih="100dvh"
+        bg={colors.background}
+        style={{
+          color: colors.text,
+          "--catalog-radius": borderRadius,
+          "--catalog-surface": colors.surface,
+          "--catalog-muted": colors.mutedText,
+          "--catalog-primary": colors.primary,
+          "--catalog-ease-out-quart": "cubic-bezier(0.25, 1, 0.5, 1)",
+          "--catalog-ease-out-expo": "cubic-bezier(0.16, 1, 0.3, 1)",
+        }}
+      >
+        {catalog.coverImageUrl && (
+          <Box
+            className="catalog-cover"
+            h={{ base: 200, md: 320 }}
+            w="100%"
+            style={{
+              backgroundImage: `url(${catalog.coverImageUrl})`,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+            }}
+          />
+        )}
 
-              <Group gap="xs">
-                <Badge color="brand" variant="light">
-                  Catálogo público
-                </Badge>
-                <Badge color="gray" variant="light">
-                  {data.catalog.currencyCode}
-                </Badge>
-              </Group>
-
+        <Container
+          size="md"
+          py={40}
+          mb={60}
+          style={{
+            marginTop: catalog.coverImageUrl ? -60 : 0,
+            position: "relative",
+            zIndex: 10,
+          }}
+        >
+          <Stack gap="xl">
+            <Stack
+              className="catalog-hero"
+              gap="md"
+              align="center"
+              ta="center"
+              mb={24}
+              style={getEnterMotionStyle(0, 140)}
+            >
               <Title
                 order={1}
+                c={colors.text}
                 style={{
-                  letterSpacing: "-0.04em",
-                  fontSize: "clamp(2.4rem, 6vw, 4.6rem)",
+                  textWrap: "balance",
+                  fontSize: "clamp(2rem, 5vw, 3.5rem)",
+                  lineHeight: 1.1,
+                  fontWeight: 800,
+                  letterSpacing: "-0.02em",
                 }}
               >
-                {data.catalog.name}
+                {catalog.name}
               </Title>
-
-              <Text c="dimmed" maw={760} size="lg">
-                {data.catalog.description ||
-                  "Consulta los productos disponibles y comparte este enlace con tus clientes."}
-              </Text>
+              {catalog.description && (
+                <Text
+                  size="lg"
+                  maw={600}
+                  style={{ color: colors.mutedText, textWrap: "pretty" }}
+                >
+                  {catalog.description}
+                </Text>
+              )}
             </Stack>
 
-            <Card
-              withBorder
-              radius="xl"
-              p="lg"
-              maw={320}
-              bg="rgba(255,255,255,0.82)"
-              style={{ backdropFilter: "blur(12px)" }}
-            >
-              <Stack gap="sm">
-                <Group gap="xs" wrap="nowrap">
-                  <ThemeIcon color="brand" variant="light" radius="xl">
-                    <Sparkles size={16} />
-                  </ThemeIcon>
-                  <Text fw={700}>Información rápida</Text>
-                </Group>
-                <Text size="sm" c="dimmed">
-                  {data.items.length} productos visibles en {categories.length}
-                  {" "}
-                  categorías.
+            {items.length === 0 ? (
+              <Box ta="center" py={60} style={getEnterMotionStyle(1, 200)}>
+                <Text size="lg" style={{ color: colors.mutedText }}>
+                  Este catálogo todavía no tiene productos disponibles.
                 </Text>
-                <Text size="sm" c="dimmed">
-                  Modo de precio: {data.catalog.priceDisplayMode.replaceAll("_", " ")}
-                </Text>
-                {data.catalog.locationId ? (
-                  <Group gap={8} wrap="nowrap">
-                    <MapPin size={15} />
-                    <Text size="sm" c="dimmed">
-                      Catálogo asociado a una sede activa.
-                    </Text>
-                  </Group>
-                ) : null}
-              </Stack>
-            </Card>
-          </Group>
+              </Box>
+            ) : null}
 
-          {data.items.length === 0 ? (
-            <Alert color="gray" radius="xl" icon={<CircleAlert size={18} />}>
-              Este catálogo todavía no tiene productos públicos disponibles.
-            </Alert>
-          ) : null}
+            {categories.map((category, categoryIndex) => {
+              const categoryItems = itemsByCategory.get(category.id) ?? [];
+              if (categoryItems.length === 0) return null;
 
-          {categories.map((category) => {
-            const items = itemsByCategory.get(category.id) ?? [];
+              return (
+                <Stack
+                  key={category.id}
+                  gap="lg"
+                  mt={16}
+                  style={getEnterMotionStyle(categoryIndex + 1, 220)}
+                >
+                  <Stack gap={4}>
+                    <Title order={2} size="h3" style={{ color: colors.text }}>
+                      {category.name}
+                    </Title>
+                    {category.description && (
+                      <Text size="sm" style={{ color: colors.mutedText }}>
+                        {category.description}
+                      </Text>
+                    )}
+                  </Stack>
 
-            if (items.length === 0) {
-              return null;
-            }
-
-            return (
-              <Stack key={category.id} gap="lg">
-                <Stack gap={4}>
-                  <Title order={2} style={{ letterSpacing: "-0.03em" }}>
-                    {category.name}
-                  </Title>
-                  {category.description ? (
-                    <Text c="dimmed">{category.description}</Text>
-                  ) : null}
-                </Stack>
-
-                <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="lg">
-                  {items.map((item) => {
-                    const price = formatMoney(
-                      item.basePriceAmount,
-                      data.catalog.currencyCode,
-                    );
-
-                    return (
-                      <Card
+                  <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing="md">
+                    {categoryItems.map((item, itemIndex) => (
+                      <CatalogItemCard
                         key={item.id}
-                        withBorder
-                        radius="xl"
-                        p="lg"
-                        bg="white"
-                        style={{ boxShadow: "0 18px 44px rgba(160, 65, 24, 0.08)" }}
-                      >
-                        <Stack gap="md" h="100%">
-                          {item.imageUrl ? (
-                            <Box
-                              h={220}
-                              style={{
-                                borderRadius: 20,
-                                backgroundImage: `url(${item.imageUrl})`,
-                                backgroundSize: "cover",
-                                backgroundPosition: "center",
-                                backgroundColor: "var(--mantine-color-warm-2)",
-                              }}
-                            />
-                          ) : null}
+                        item={item}
+                        catalog={catalog}
+                        colors={colors}
+                        brandTheme={brandTheme}
+                        animationIndex={categoryIndex * 3 + itemIndex}
+                        reducedMotion={reducedMotion}
+                      />
+                    ))}
+                  </SimpleGrid>
+                </Stack>
+              );
+            })}
 
-                          <Group justify="space-between" align="flex-start">
-                            <Stack gap={2} style={{ flex: 1 }}>
-                              <Text fw={800} size="lg" c="dark.8">
-                                {item.name}
-                              </Text>
-                              <Text size="sm" c="dimmed">
-                                {item.shortDescription || "Sin descripción corta"}
-                              </Text>
-                            </Stack>
-
-                            {item.isFeatured ? (
-                              <Badge color="orange" variant="light">
-                                Destacado
-                              </Badge>
-                            ) : null}
-                          </Group>
-
-                          {item.description ? (
-                            <Text size="sm" c="dark.6">
-                              {item.description}
-                            </Text>
-                          ) : null}
-
-                          <Divider />
-
-                          <Group justify="space-between" mt="auto" align="flex-end">
-                            <Stack gap={0}>
-                              <Text size="xs" c="dimmed">
-                                Precio
-                              </Text>
-                              <Text fw={900} c="brand.7" size="xl">
-                                {price || "Consultar"}
-                              </Text>
-                            </Stack>
-
-                            <Badge color="teal" variant="light">
-                              Disponible
-                            </Badge>
-                          </Group>
-                        </Stack>
-                      </Card>
-                    );
-                  })}
+            {uncategorizedItems.length > 0 && (
+              <Stack gap="lg" mt={16} style={getEnterMotionStyle(categories.length + 2)}>
+                <Title order={2} size="h3" style={{ color: colors.text }}>
+                  Otros productos
+                </Title>
+                <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing="md">
+                  {uncategorizedItems.map((item, itemIndex) => (
+                    <CatalogItemCard
+                      key={item.id}
+                      item={item}
+                      catalog={catalog}
+                      colors={colors}
+                      brandTheme={brandTheme}
+                      animationIndex={categories.length * 3 + itemIndex}
+                      reducedMotion={reducedMotion}
+                    />
+                  ))}
                 </SimpleGrid>
               </Stack>
-            );
-          })}
+            )}
 
-          {uncategorizedItems.length > 0 ? (
-            <Stack gap="lg">
-              <Title order={2} style={{ letterSpacing: "-0.03em" }}>
-                Más opciones
+            <Box
+              className="catalog-cta"
+              mt={40}
+              p="xl"
+              style={{
+                backgroundColor: colors.surface,
+                borderRadius: borderRadius,
+                border: `1px solid ${colors.primary}15`,
+                textAlign: "center",
+                ...getEnterMotionStyle(categories.length + 3, 260),
+              }}
+            >
+              <Title order={3} size="h4" mb={8} style={{ color: colors.text }}>
+                ¿Te interesa algún producto?
               </Title>
-
-              <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="lg">
-                {uncategorizedItems.map((item) => {
-                  const price = formatMoney(
-                    item.basePriceAmount,
-                    data.catalog.currencyCode,
-                  );
-
-                  return (
-                    <Card key={item.id} withBorder radius="xl" p="lg" bg="white">
-                      <Stack gap="sm">
-                        <Text fw={800} size="lg">
-                          {item.name}
-                        </Text>
-                        <Text size="sm" c="dimmed">
-                          {item.shortDescription || "Sin descripción corta"}
-                        </Text>
-                        <Text fw={900} c="brand.7">
-                          {price || "Consultar"}
-                        </Text>
-                      </Stack>
-                    </Card>
-                  );
-                })}
-              </SimpleGrid>
-            </Stack>
-          ) : null}
-
-          <Card
-            withBorder
-            radius="xl"
-            p={{ base: "lg", md: "xl" }}
-            bg="brand.0"
-          >
-            <Group justify="space-between" align="center">
-              <Stack gap={4}>
-                <Text fw={800} size="lg" c="brand.8">
-                  ¿Te compartieron este catálogo?
-                </Text>
-                <Text c="brand.7">
-                  Pide el enlace directo por WhatsApp o comparte esta página con tus clientes.
-                </Text>
-              </Stack>
-
+              <Text mb="md" style={{ color: colors.mutedText }}>
+                Contáctanos directamente para más información o para hacer tu pedido.
+              </Text>
               <Button
                 component="a"
-                href="https://wa.me"
+                href="https://wa.me/"
                 target="_blank"
                 rel="noreferrer"
-                color="brand"
-                leftSection={<MessageCircle size={16} />}
+                size="md"
+                className="catalog-whatsapp-button"
+                leftSection={<MessageCircle size={20} />}
+                style={{
+                  backgroundColor: colors.primary,
+                  color: "#f8f8f6",
+                  borderRadius: borderRadius,
+                }}
               >
-                Abrir WhatsApp
+                Escribir por WhatsApp
               </Button>
-            </Group>
-          </Card>
-        </Stack>
-      </Container>
-    </Box>
+            </Box>
+          </Stack>
+        </Container>
+
+        <style>{`
+          .catalog-cover {
+            transform-origin: center;
+            animation: catalog-cover-enter 900ms var(--catalog-ease-out-quart) both;
+          }
+
+          .catalog-card {
+            cursor: default;
+            contain: paint;
+          }
+
+          .catalog-card:hover {
+            transform: translate3d(0, -6px, 0);
+            box-shadow: 0 16px 32px rgba(0, 0, 0, 0.12) !important;
+          }
+
+          .catalog-whatsapp-button {
+            transition:
+              transform 180ms var(--catalog-ease-out-quart),
+              box-shadow 180ms var(--catalog-ease-out-quart),
+              filter 180ms var(--catalog-ease-out-quart);
+          }
+
+          .catalog-whatsapp-button:hover {
+            transform: translate3d(0, -2px, 0) scale(1.02);
+            box-shadow: 0 14px 24px rgba(0, 0, 0, 0.16);
+            filter: saturate(1.08);
+          }
+
+          .catalog-whatsapp-button:active {
+            transform: translate3d(0, 0, 0) scale(0.98);
+          }
+
+          .catalog-featured-badge {
+            animation: catalog-badge-in 420ms var(--catalog-ease-out-expo) both;
+          }
+
+          @keyframes catalog-enter {
+            from {
+              opacity: 0;
+              transform: translate3d(0, 18px, 0);
+            }
+
+            to {
+              opacity: 1;
+              transform: translate3d(0, 0, 0);
+            }
+          }
+
+          @keyframes catalog-cover-enter {
+            from {
+              opacity: 0;
+              transform: scale(1.03);
+            }
+
+            to {
+              opacity: 1;
+              transform: scale(1);
+            }
+          }
+
+          @keyframes catalog-badge-in {
+            from {
+              opacity: 0;
+              transform: translate3d(0, -6px, 0) scale(0.95);
+            }
+
+            to {
+              opacity: 1;
+              transform: translate3d(0, 0, 0) scale(1);
+            }
+          }
+
+          @media (prefers-reduced-motion: reduce) {
+            .catalog-cover,
+            .catalog-featured-badge {
+              animation-duration: 120ms;
+            }
+
+            .catalog-card,
+            .catalog-whatsapp-button {
+              transition-duration: 120ms !important;
+            }
+
+            .catalog-card:hover {
+              transform: translate3d(0, -2px, 0);
+            }
+
+            .catalog-whatsapp-button:hover {
+              transform: translate3d(0, -1px, 0) scale(1.01);
+            }
+          }
+        `}</style>
+      </Box>
+    </MantineProvider>
+  );
+}
+
+function CatalogItemCard({
+  item,
+  catalog,
+  colors,
+  brandTheme,
+  animationIndex,
+  reducedMotion,
+}: {
+  item: CatalogItem;
+  catalog: PublicCatalog;
+  colors: CatalogColors;
+  brandTheme: BrandThemeConfig | null;
+  animationIndex: number;
+  reducedMotion: boolean;
+}) {
+  const price =
+    catalog.priceDisplayMode !== "hidden"
+      ? formatMoney(item.basePriceAmount, catalog.currencyCode)
+    : null;
+
+  return (
+    <Card
+      className="catalog-card"
+      p="md"
+      radius="var(--catalog-radius)"
+      style={{
+        backgroundColor: "var(--catalog-surface)",
+        border:
+          brandTheme?.cardStyle === "flat"
+            ? "none"
+            : brandTheme?.cardStyle === "outlined"
+              ? `1px solid ${colors.mutedText}25`
+              : "none",
+        boxShadow:
+          brandTheme?.cardStyle === "elevated" || !brandTheme?.cardStyle
+            ? "0 8px 30px rgba(0, 0, 0, 0.04)"
+            : "none",
+        transition:
+          "transform 220ms var(--catalog-ease-out-quart), box-shadow 220ms var(--catalog-ease-out-quart)",
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+        opacity: reducedMotion ? 1 : 0,
+        transform: reducedMotion ? "none" : "translate3d(0, 14px, 0)",
+        animation: reducedMotion
+          ? undefined
+          : "catalog-enter 520ms var(--catalog-ease-out-expo) forwards",
+        animationDelay: reducedMotion ? undefined : `${260 + animationIndex * 60}ms`,
+        willChange: reducedMotion ? undefined : "transform, opacity",
+      }}
+    >
+      {item.imageUrl && (
+        <Card.Section mb="sm">
+          <Image
+            src={item.imageUrl}
+            alt={item.name}
+            height={200}
+            fit="cover"
+            loading="lazy"
+          />
+        </Card.Section>
+      )}
+
+      <Stack gap={4} flex={1}>
+        <Group justify="space-between" align="start" wrap="nowrap">
+          <Text fw={600} size="lg" style={{ color: colors.text, lineHeight: 1.3 }}>
+            {item.name}
+          </Text>
+          {item.isFeatured && (
+            <Badge
+              className="catalog-featured-badge"
+              variant="filled"
+              size="sm"
+              style={{ backgroundColor: colors.accent, color: "#fff" }}
+            >
+              Destacado
+            </Badge>
+          )}
+        </Group>
+
+        {item.shortDescription && (
+          <Text
+            size="sm"
+            lineClamp={2}
+            style={{ color: colors.mutedText, marginTop: 4 }}
+          >
+            {item.shortDescription}
+          </Text>
+        )}
+      </Stack>
+
+      {price && (
+        <Text fw={700} size="xl" mt="xl" style={{ color: colors.primary }}>
+          {catalog.priceDisplayMode === "starting_at" ? `Desde ${price}` : price}
+        </Text>
+      )}
+    </Card>
   );
 }

@@ -8,6 +8,7 @@ import {
   catalogs,
   leadRequests,
   locations,
+  brandThemes,
   reservationRequests,
   siteLinks,
   siteSections,
@@ -396,27 +397,31 @@ export const getPublicSite = publicProcedure
 export const getPublicCatalog = publicProcedure
   .input(publicCatalogLookupSchema)
   .handler(async ({ input }) => {
-    const [catalog] = await db
+    const [result] = await db
       .select({
-        id: catalogs.id,
-        organizationId: catalogs.organizationId,
-        siteId: catalogs.siteId,
-        locationId: catalogs.locationId,
-        brandThemeId: catalogs.brandThemeId,
-        name: catalogs.name,
-        slug: catalogs.slug,
-        description: catalogs.description,
-        currencyCode: catalogs.currencyCode,
-        status: catalogs.status,
-        priceDisplayMode: catalogs.priceDisplayMode,
-        coverImageUrl: catalogs.coverImageUrl,
-        isPublic: catalogs.isPublic,
-        settings: catalogs.settings,
-        createdAt: catalogs.createdAt,
-        updatedAt: catalogs.updatedAt,
+        catalog: {
+          id: catalogs.id,
+          organizationId: catalogs.organizationId,
+          siteId: catalogs.siteId,
+          locationId: catalogs.locationId,
+          brandThemeId: catalogs.brandThemeId,
+          name: catalogs.name,
+          slug: catalogs.slug,
+          description: catalogs.description,
+          currencyCode: catalogs.currencyCode,
+          status: catalogs.status,
+          priceDisplayMode: catalogs.priceDisplayMode,
+          coverImageUrl: catalogs.coverImageUrl,
+          isPublic: catalogs.isPublic,
+          settings: catalogs.settings,
+          createdAt: catalogs.createdAt,
+          updatedAt: catalogs.updatedAt,
+        },
+        brandTheme: brandThemes,
       })
       .from(catalogs)
       .innerJoin(organization, eq(organization.id, catalogs.organizationId))
+      .leftJoin(brandThemes, eq(brandThemes.id, catalogs.brandThemeId))
       .where(
         and(
           eq(organization.slug, input.organizationSlug),
@@ -427,9 +432,11 @@ export const getPublicCatalog = publicProcedure
       )
       .limit(1);
 
-    if (!catalog) {
+    if (!result) {
       notFound("No se encontró un catálogo público con esos datos.");
     }
+    
+    const { catalog, brandTheme } = result;
 
     const categories = await db
       .select()
@@ -454,7 +461,7 @@ export const getPublicCatalog = publicProcedure
       )
       .orderBy(asc(catalogItems.sortOrder));
 
-    return { catalog, categories, items };
+    return { catalog, brandTheme, categories, items };
   });
 
 export const createLeadRequest = publicProcedure
