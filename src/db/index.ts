@@ -1,5 +1,7 @@
 import "@tanstack/react-start/server-only";
 
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { drizzle } from "drizzle-orm/bun-sqlite";
@@ -13,9 +15,13 @@ const schema = {
   ...mainSchema,
 };
 
-const migrationsFolder = fileURLToPath(
+const moduleRelativeMigrationsFolder = fileURLToPath(
   new URL("../../drizzle", import.meta.url),
 );
+const cwdMigrationsFolder = resolve(process.cwd(), "drizzle");
+const migrationsFolder = existsSync(cwdMigrationsFolder)
+  ? cwdMigrationsFolder
+  : moduleRelativeMigrationsFolder;
 
 const globalForDb = globalThis as typeof globalThis & {
   __relicwareMigrationsApplied?: boolean;
