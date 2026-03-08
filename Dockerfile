@@ -27,7 +27,7 @@ ENV NODE_ENV=production
 ENV DATABASE_URL=/tmp/app.db
 ENV PORT=3000
 
-USER bun
+USER root
 EXPOSE 3000/tcp
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
