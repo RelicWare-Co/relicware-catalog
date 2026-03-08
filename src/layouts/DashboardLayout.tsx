@@ -28,6 +28,7 @@ import {
   ChevronsUpDown,
   LayoutDashboard,
   LogOut,
+  Palette,
   Receipt,
   Settings,
   ShoppingBag,
@@ -177,6 +178,11 @@ export function DashboardLayout({ children }: { children?: React.ReactNode }) {
       label: "Clientes",
       path: "/dashboard/customers",
       comingSoon: true,
+    },
+    {
+      icon: Palette,
+      label: "Apariencia",
+      path: "/dashboard/appearance",
     },
     {
       icon: Settings,
