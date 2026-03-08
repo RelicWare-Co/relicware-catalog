@@ -15,7 +15,7 @@ import {
   Title,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
-import { useDisclosure } from "@mantine/hooks";
+import { useDebouncedValue, useDisclosure } from "@mantine/hooks";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
   AlertCircle,
@@ -27,10 +27,14 @@ import {
   Trash2,
   Users,
 } from "lucide-react";
-import { useState } from "react";
+import { type ChangeEvent, useEffect, useState } from "react";
 
 import { authClient } from "#/lib/auth-client";
 import { getErrorMessage } from "#/lib/get-error-message";
+import {
+  type OrganizationRoleKey,
+  organizationRoles,
+} from "#/lib/organization-permissions";
 
 type OrganizationFormValues = {
   name: string;
@@ -38,7 +42,15 @@ type OrganizationFormValues = {
   logo: string;
 };
 
+type SlugAvailabilityState = {
+  status: "idle" | "checking" | "available" | "taken" | "error";
+  slug: string;
+  message: string | null;
+  suggestion: string | null;
+};
+
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const slugConflictFieldError = "Este slug ya está en uso.";
 
 const createOrganizationSchema = (values: OrganizationFormValues) => {
   const normalizedSlug = values.slug.trim();
@@ -73,6 +85,108 @@ const formatDate = (value: Date | string) =>
   new Intl.DateTimeFormat("es-CO", {
     dateStyle: "medium",
   }).format(new Date(value));
+
+const createIdleSlugState = (): SlugAvailabilityState => ({
+  status: "idle",
+  slug: "",
+  message: null,
+  suggestion: null,
+});
+
+const randomSlugSuffix = () =>
+  Math.random().toString(36).replace(/[^a-z0-9]/g, "").slice(0, 4);
+
+const isSlugTakenError = (error: unknown) => {
+  const message = getErrorMessage(error, "").toLowerCase();
+
+  return (
+    message.includes("organization slug already taken") ||
+    message.includes("organization already exists")
+  );
+};
+
+const isManagedSlugError = (error: unknown) =>
+  typeof error === "string" && error.startsWith(slugConflictFieldError);
+
+const isOrganizationRoleKey = (role: string): role is OrganizationRoleKey =>
+  role in organizationRoles;
+
+const findAvailableSlugSuggestion = async (
+  baseSlug: string,
+  currentSlug?: string | null,
+) => {
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const candidate = `${baseSlug}-${randomSlugSuffix()}`;
+
+    if (candidate === currentSlug) {
+      continue;
+    }
+
+    const { error } = await authClient.organization.checkSlug({
+      slug: candidate,
+    });
+
+    if (!error) {
+      return candidate;
+    }
+
+    if (!isSlugTakenError(error)) {
+      return null;
+    }
+  }
+
+  return null;
+};
+
+const getSlugAvailability = async ({
+  slug,
+  currentSlug,
+}: {
+  slug: string;
+  currentSlug?: string | null;
+}): Promise<SlugAvailabilityState> => {
+  if (!slug) {
+    return createIdleSlugState();
+  }
+
+  if (currentSlug && slug === currentSlug) {
+    return {
+      status: "available",
+      slug,
+      message: "Puedes conservar el slug actual.",
+      suggestion: null,
+    };
+  }
+
+  const { error } = await authClient.organization.checkSlug({ slug });
+
+  if (!error) {
+    return {
+      status: "available",
+      slug,
+      message: `"${slug}" está disponible.`,
+      suggestion: null,
+    };
+  }
+
+  if (!isSlugTakenError(error)) {
+    return {
+      status: "error",
+      slug,
+      message: "No pudimos verificar si el slug está disponible en este momento.",
+      suggestion: null,
+    };
+  }
+
+  const suggestion = await findAvailableSlugSuggestion(slug, currentSlug);
+
+  return {
+    status: "taken",
+    slug,
+    message: `"${slug}" ya está en uso.`,
+    suggestion,
+  };
+};
 
 export const Route = createFileRoute("/dashboard/organizations")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -113,6 +227,12 @@ function OrganizationsPage() {
   >(null);
   const [isDeletingActiveOrganization, setIsDeletingActiveOrganization] =
     useState(false);
+  const [createSlugState, setCreateSlugState] = useState<SlugAvailabilityState>(
+    () => createIdleSlugState(),
+  );
+  const [editSlugState, setEditSlugState] = useState<SlugAvailabilityState>(() =>
+    createIdleSlugState(),
+  );
 
   const createForm = useForm<OrganizationFormValues>({
     mode: "controlled",
@@ -135,28 +255,158 @@ function OrganizationsPage() {
   });
 
   const activeRole = activeMemberRole?.role;
-  const canUpdateActiveOrganization = activeRole
+  const normalizedActiveRole =
+    activeRole && isOrganizationRoleKey(activeRole) ? activeRole : null;
+  const canUpdateActiveOrganization = normalizedActiveRole
     ? authClient.organization.checkRolePermission({
-        role: activeRole as any,
+        role: normalizedActiveRole,
         permissions: {
           organization: ["update"],
         },
       })
     : false;
-  const canDeleteActiveOrganization = activeRole
+  const canDeleteActiveOrganization = normalizedActiveRole
     ? authClient.organization.checkRolePermission({
-        role: activeRole as any,
+        role: normalizedActiveRole,
         permissions: {
           organization: ["delete"],
         },
       })
     : false;
   const hasActiveOrganization = Boolean(session?.session.activeOrganizationId);
+  const createCandidateSlug =
+    createForm.values.slug.trim() || toSlug(createForm.values.name);
+  const editCandidateSlug = editForm.values.slug.trim() || toSlug(editForm.values.name);
+  const createHasManualSlug = createForm.values.slug.trim().length > 0;
+  const editHasManualSlug = editForm.values.slug.trim().length > 0;
+  const createSlugInputError =
+    !createHasManualSlug && isManagedSlugError(createForm.errors.slug)
+      ? undefined
+      : createForm.errors.slug;
+  const editSlugInputError =
+    !editHasManualSlug && isManagedSlugError(editForm.errors.slug)
+      ? undefined
+      : editForm.errors.slug;
+  const [debouncedCreateCandidateSlug] = useDebouncedValue(createCandidateSlug, 300);
+  const [debouncedEditCandidateSlug] = useDebouncedValue(editCandidateSlug, 300);
   const redirectPath =
     search.redirect?.startsWith("/dashboard") &&
     search.redirect !== "/dashboard/organizations"
       ? search.redirect
       : null;
+
+  const clearCreateSlugConflict = () => {
+    if (isManagedSlugError(createForm.errors.slug)) {
+      createForm.clearFieldError("slug");
+    }
+  };
+
+  const clearEditSlugConflict = () => {
+    if (isManagedSlugError(editForm.errors.slug)) {
+      editForm.clearFieldError("slug");
+    }
+  };
+
+  const handleCreateNameChange = (event: ChangeEvent<HTMLInputElement>) => {
+    createForm.setFieldValue("name", event.currentTarget.value);
+    clearCreateSlugConflict();
+  };
+
+  const handleCreateSlugChange = (event: ChangeEvent<HTMLInputElement>) => {
+    createForm.setFieldValue("slug", event.currentTarget.value);
+    clearCreateSlugConflict();
+  };
+
+  const handleEditNameChange = (event: ChangeEvent<HTMLInputElement>) => {
+    editForm.setFieldValue("name", event.currentTarget.value);
+    clearEditSlugConflict();
+  };
+
+  const handleEditSlugChange = (event: ChangeEvent<HTMLInputElement>) => {
+    editForm.setFieldValue("slug", event.currentTarget.value);
+    clearEditSlugConflict();
+  };
+
+  useEffect(() => {
+    if (!createOpened) {
+      setCreateSlugState(createIdleSlugState());
+      return;
+    }
+
+    if (!debouncedCreateCandidateSlug) {
+      setCreateSlugState(createIdleSlugState());
+      return;
+    }
+
+    if (!slugPattern.test(debouncedCreateCandidateSlug)) {
+      setCreateSlugState(createIdleSlugState());
+      return;
+    }
+
+    let cancelled = false;
+
+    setCreateSlugState({
+      status: "checking",
+      slug: debouncedCreateCandidateSlug,
+      message: `Revisando si "${debouncedCreateCandidateSlug}" está libre...`,
+      suggestion: null,
+    });
+
+    void getSlugAvailability({ slug: debouncedCreateCandidateSlug }).then(
+      (result) => {
+        if (cancelled) {
+          return;
+        }
+
+        setCreateSlugState(result);
+      },
+    );
+
+    return () => {
+      cancelled = true;
+    };
+  }, [createOpened, debouncedCreateCandidateSlug]);
+
+  useEffect(() => {
+    if (!editOpened) {
+      setEditSlugState(createIdleSlugState());
+      return;
+    }
+
+    if (!debouncedEditCandidateSlug) {
+      setEditSlugState(createIdleSlugState());
+      return;
+    }
+
+    if (!slugPattern.test(debouncedEditCandidateSlug)) {
+      setEditSlugState(createIdleSlugState());
+      return;
+    }
+
+    let cancelled = false;
+
+    setEditSlugState({
+      status: "checking",
+      slug: debouncedEditCandidateSlug,
+      message: `Revisando si "${debouncedEditCandidateSlug}" está libre...`,
+      suggestion: null,
+    });
+
+    void getSlugAvailability({
+      slug: debouncedEditCandidateSlug,
+      currentSlug: activeOrganization?.slug,
+    }).then((result) => {
+      if (cancelled) {
+        return;
+      }
+
+      setEditSlugState(result);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeOrganization?.slug, debouncedEditCandidateSlug, editOpened]);
 
   const refreshOrganizations = async () => {
     await Promise.all([
@@ -216,6 +466,17 @@ function OrganizationsPage() {
       return;
     }
 
+    const slugAvailability = await getSlugAvailability({ slug });
+
+    setCreateSlugState(slugAvailability);
+
+    if (slugAvailability.status === "taken") {
+      if (values.slug.trim()) {
+        createForm.setFieldError("slug", slugConflictFieldError);
+      }
+      return;
+    }
+
     const { error } = await authClient.organization.create({
       name: values.name.trim(),
       slug,
@@ -223,6 +484,16 @@ function OrganizationsPage() {
     });
 
     if (error) {
+      if (isSlugTakenError(error)) {
+        const nextSlugState = await getSlugAvailability({ slug });
+
+        setCreateSlugState(nextSlugState);
+        if (values.slug.trim()) {
+          createForm.setFieldError("slug", slugConflictFieldError);
+        }
+        return;
+      }
+
       setFeedback({
         tone: "red",
         message: getErrorMessage(error, "No se pudo crear la organización"),
@@ -232,6 +503,7 @@ function OrganizationsPage() {
 
     createModal.close();
     createForm.reset();
+    setCreateSlugState(createIdleSlugState());
     await refreshOrganizations();
 
     if (!hasActiveOrganization || redirectPath) {
@@ -255,6 +527,12 @@ function OrganizationsPage() {
       slug: activeOrganization.slug,
       logo: activeOrganization.logo ?? "",
     });
+    setEditSlugState({
+      status: "available",
+      slug: activeOrganization.slug,
+      message: "Puedes conservar el slug actual.",
+      suggestion: null,
+    });
     editModal.open();
   };
 
@@ -272,6 +550,20 @@ function OrganizationsPage() {
       return;
     }
 
+    const slugAvailability = await getSlugAvailability({
+      slug,
+      currentSlug: activeOrganization.slug,
+    });
+
+    setEditSlugState(slugAvailability);
+
+    if (slugAvailability.status === "taken") {
+      if (values.slug.trim()) {
+        editForm.setFieldError("slug", slugConflictFieldError);
+      }
+      return;
+    }
+
     const { error } = await authClient.organization.update({
       organizationId: activeOrganization.id,
       data: {
@@ -282,6 +574,19 @@ function OrganizationsPage() {
     });
 
     if (error) {
+      if (isSlugTakenError(error)) {
+        const nextSlugState = await getSlugAvailability({
+          slug,
+          currentSlug: activeOrganization.slug,
+        });
+
+        setEditSlugState(nextSlugState);
+        if (values.slug.trim()) {
+          editForm.setFieldError("slug", slugConflictFieldError);
+        }
+        return;
+      }
+
       setFeedback({
         tone: "red",
         message: getErrorMessage(error, "No se pudo actualizar la organización"),
@@ -290,6 +595,7 @@ function OrganizationsPage() {
     }
 
     editModal.close();
+    setEditSlugState(createIdleSlugState());
     await refreshOrganizations();
     setFeedback({
       tone: "green",
@@ -355,6 +661,7 @@ function OrganizationsPage() {
             leftSection={<Plus size={18} />}
             onClick={() => {
               createForm.reset();
+              setCreateSlugState(createIdleSlugState());
               createModal.open();
             }}
           >
@@ -444,6 +751,7 @@ function OrganizationsPage() {
                         leftSection={<Plus size={16} />}
                         onClick={() => {
                           createForm.reset();
+                          setCreateSlugState(createIdleSlugState());
                           createModal.open();
                         }}
                       >
@@ -649,14 +957,72 @@ function OrganizationsPage() {
               placeholder="Ej: Casa Nativa"
               key={createForm.key("name")}
               {...createForm.getInputProps("name")}
+              onChange={handleCreateNameChange}
             />
-            <TextInput
-              label="Slug"
-              placeholder="casa-nativa"
-              description="Si lo dejas vacío, lo generamos a partir del nombre."
-              key={createForm.key("slug")}
-              {...createForm.getInputProps("slug")}
-            />
+            <Stack gap="xs">
+              <TextInput
+                label="Slug"
+                placeholder="casa-nativa"
+                description={
+                  createHasManualSlug
+                    ? "Usa solo minúsculas, números y guiones."
+                    : "Si lo dejas vacío, lo generamos a partir del nombre."
+                }
+                key={createForm.key("slug")}
+                {...createForm.getInputProps("slug")}
+                error={createSlugInputError}
+                onChange={handleCreateSlugChange}
+              />
+              {!createHasManualSlug && createCandidateSlug ? (
+                <Text size="xs" c="dimmed">
+                  Slug que se intentará usar: {createCandidateSlug}
+                </Text>
+              ) : null}
+              {createSlugState.status === "checking" ? (
+                <Text size="xs" c="dimmed">
+                  {createSlugState.message}
+                </Text>
+              ) : null}
+              {createSlugState.status === "available" ? (
+                <Text size="xs" c="teal.7">
+                  {createSlugState.message}
+                </Text>
+              ) : null}
+              {createSlugState.status === "error" ? (
+                <Text size="xs" c="dimmed">
+                  {createSlugState.message}
+                </Text>
+              ) : null}
+              {createSlugState.status === "taken" ? (
+                <Alert color="orange" radius="lg" variant="light" icon={<AlertCircle size={16} />}>
+                  <Stack gap="xs">
+                    <Text size="sm">{createSlugState.message}</Text>
+                    {createSlugState.suggestion ? (
+                      <Group gap="xs" align="center">
+                        <Badge color="orange" variant="light">
+                          {createSlugState.suggestion}
+                        </Badge>
+                        <Button
+                          size="xs"
+                          variant="light"
+                          onClick={() => {
+                            createForm.setFieldValue("slug", createSlugState.suggestion ?? "");
+                            clearCreateSlugConflict();
+                          }}
+                        >
+                          Usar sugerencia
+                        </Button>
+                      </Group>
+                    ) : (
+                      <Text size="xs" c="dimmed">
+                        Intenta con una variante corta al final, por ejemplo:
+                        {` ${createSlugState.slug}-a1b2`}
+                      </Text>
+                    )}
+                  </Stack>
+                </Alert>
+              ) : null}
+            </Stack>
             <TextInput
               label="Logo"
               placeholder="https://..."
@@ -664,7 +1030,14 @@ function OrganizationsPage() {
               {...createForm.getInputProps("logo")}
             />
             <Group justify="flex-end">
-              <Button variant="subtle" color="gray" onClick={createModal.close}>
+              <Button
+                variant="subtle"
+                color="gray"
+                onClick={() => {
+                  createModal.close();
+                  setCreateSlugState(createIdleSlugState());
+                }}
+              >
                 Cancelar
               </Button>
               <Button type="submit" loading={createForm.submitting}>
@@ -691,13 +1064,66 @@ function OrganizationsPage() {
               placeholder="Ej: Casa Nativa"
               key={editForm.key("name")}
               {...editForm.getInputProps("name")}
+              onChange={handleEditNameChange}
             />
-            <TextInput
-              label="Slug"
-              placeholder="casa-nativa"
-              key={editForm.key("slug")}
-              {...editForm.getInputProps("slug")}
-            />
+            <Stack gap="xs">
+              <TextInput
+                label="Slug"
+                placeholder="casa-nativa"
+                key={editForm.key("slug")}
+                {...editForm.getInputProps("slug")}
+                error={editSlugInputError}
+                onChange={handleEditSlugChange}
+              />
+              {!editHasManualSlug && editCandidateSlug ? (
+                <Text size="xs" c="dimmed">
+                  Slug que se intentará usar: {editCandidateSlug}
+                </Text>
+              ) : null}
+              {editSlugState.status === "checking" ? (
+                <Text size="xs" c="dimmed">
+                  {editSlugState.message}
+                </Text>
+              ) : null}
+              {editSlugState.status === "available" ? (
+                <Text size="xs" c="teal.7">
+                  {editSlugState.message}
+                </Text>
+              ) : null}
+              {editSlugState.status === "error" ? (
+                <Text size="xs" c="dimmed">
+                  {editSlugState.message}
+                </Text>
+              ) : null}
+              {editSlugState.status === "taken" ? (
+                <Alert color="orange" radius="lg" variant="light" icon={<AlertCircle size={16} />}>
+                  <Stack gap="xs">
+                    <Text size="sm">{editSlugState.message}</Text>
+                    {editSlugState.suggestion ? (
+                      <Group gap="xs" align="center">
+                        <Badge color="orange" variant="light">
+                          {editSlugState.suggestion}
+                        </Badge>
+                        <Button
+                          size="xs"
+                          variant="light"
+                          onClick={() => {
+                            editForm.setFieldValue("slug", editSlugState.suggestion ?? "");
+                            clearEditSlugConflict();
+                          }}
+                        >
+                          Usar sugerencia
+                        </Button>
+                      </Group>
+                    ) : (
+                      <Text size="xs" c="dimmed">
+                        Prueba agregando un sufijo corto al final para evitar el conflicto.
+                      </Text>
+                    )}
+                  </Stack>
+                </Alert>
+              ) : null}
+            </Stack>
             <TextInput
               label="Logo"
               placeholder="https://..."
@@ -705,7 +1131,14 @@ function OrganizationsPage() {
               {...editForm.getInputProps("logo")}
             />
             <Group justify="flex-end">
-              <Button variant="subtle" color="gray" onClick={editModal.close}>
+              <Button
+                variant="subtle"
+                color="gray"
+                onClick={() => {
+                  editModal.close();
+                  setEditSlugState(createIdleSlugState());
+                }}
+              >
                 Cancelar
               </Button>
               <Button type="submit" loading={editForm.submitting}>
