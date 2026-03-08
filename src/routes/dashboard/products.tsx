@@ -31,7 +31,8 @@ import { getErrorMessage } from "#/lib/get-error-message";
 import { orpc } from "#/orpc/client";
 
 const listInput = { limit: 50, offset: 0 } as const;
-const catalogListQueryOptions = () => orpc.catalog.list.queryOptions({ input: listInput });
+const catalogListQueryOptions = () =>
+  orpc.catalog.list.queryOptions({ input: listInput });
 const categoryListQueryOptions = (catalogId: string) =>
   orpc.catalog.listCategories.queryOptions({ input: { id: catalogId } });
 const itemListQueryOptions = (catalogId: string) =>
@@ -45,20 +46,28 @@ const itemStatusOptions = [
 
 export const Route = createFileRoute("/dashboard/products")({
   validateSearch: (search: Record<string, unknown>) => ({
-    catalogId: typeof search.catalogId === "string" ? search.catalogId : undefined,
-    categoryId: typeof search.categoryId === "string" ? search.categoryId : undefined,
+    catalogId:
+      typeof search.catalogId === "string" ? search.catalogId : undefined,
+    categoryId:
+      typeof search.categoryId === "string" ? search.categoryId : undefined,
     status: typeof search.status === "string" ? search.status : undefined,
     term: typeof search.term === "string" ? search.term : undefined,
   }),
   loaderDeps: ({ search }) => ({ catalogId: search.catalogId }),
   loader: async ({ context, deps }) => {
-    const catalogs = await context.queryClient.ensureQueryData(catalogListQueryOptions());
+    const catalogs = await context.queryClient.ensureQueryData(
+      catalogListQueryOptions(),
+    );
     const selectedCatalogId = deps.catalogId ?? catalogs.items[0]?.id;
 
     if (selectedCatalogId) {
       await Promise.all([
-        context.queryClient.ensureQueryData(categoryListQueryOptions(selectedCatalogId)),
-        context.queryClient.ensureQueryData(itemListQueryOptions(selectedCatalogId)),
+        context.queryClient.ensureQueryData(
+          categoryListQueryOptions(selectedCatalogId),
+        ),
+        context.queryClient.ensureQueryData(
+          itemListQueryOptions(selectedCatalogId),
+        ),
       ]);
     }
   },
@@ -224,7 +233,9 @@ function ProductsPage() {
       const matchesCategory = search.categoryId
         ? item.categoryId === search.categoryId
         : true;
-      const matchesStatus = search.status ? item.status === search.status : true;
+      const matchesStatus = search.status
+        ? item.status === search.status
+        : true;
 
       return matchesTerm && matchesCategory && matchesStatus;
     });
@@ -238,6 +249,7 @@ function ProductsPage() {
     value: catalog.id,
     label: catalog.name,
   }));
+  const modalSelectComboboxProps = { withinPortal: false } as const;
 
   const openCreateProduct = () => {
     setSubmitError(null);
@@ -310,7 +322,9 @@ function ProductsPage() {
   });
 
   const handleDeleteProduct = async (itemId: string) => {
-    if (!window.confirm("Esta accion eliminara el producto. Quieres continuar?")) {
+    if (
+      !window.confirm("Esta accion eliminara el producto. Quieres continuar?")
+    ) {
       return;
     }
 
@@ -335,8 +349,8 @@ function ProductsPage() {
       <Stack gap="xl">
         <Title order={2}>Productos</Title>
         <Alert color="gray">
-          No hay catalogos disponibles todavia. Crea uno primero en la seccion de
-          catalogos.
+          No hay catalogos disponibles todavia. Crea uno primero en la seccion
+          de catalogos.
         </Alert>
       </Stack>
     );
@@ -376,9 +390,21 @@ function ProductsPage() {
               <Select
                 clearable
                 label="Categoria"
+                placeholder={
+                  categoriesQuery.isFetching
+                    ? "Cargando categorias..."
+                    : categoryOptions.length > 0
+                      ? "Selecciona una categoria"
+                      : "No hay categorias disponibles"
+                }
                 data={categoryOptions}
-                key={productForm.key("categoryId")}
-                {...productForm.getInputProps("categoryId")}
+                value={productForm.values.categoryId || null}
+                onChange={(value) => {
+                  productForm.setFieldValue("categoryId", value ?? "");
+                }}
+                error={productForm.errors.categoryId}
+                comboboxProps={modalSelectComboboxProps}
+                nothingFoundMessage="No hay categorias disponibles"
               />
 
               <Select
@@ -386,6 +412,7 @@ function ProductsPage() {
                 data={itemStatusOptions}
                 allowDeselect={false}
                 key={productForm.key("status")}
+                comboboxProps={modalSelectComboboxProps}
                 {...productForm.getInputProps("status")}
               />
             </Group>
@@ -416,28 +443,40 @@ function ProductsPage() {
               <Switch
                 label="Disponible"
                 key={productForm.key("isAvailable")}
-                {...productForm.getInputProps("isAvailable", { type: "checkbox" })}
+                {...productForm.getInputProps("isAvailable", {
+                  type: "checkbox",
+                })}
               />
               <Switch
                 label="Destacado"
                 key={productForm.key("isFeatured")}
-                {...productForm.getInputProps("isFeatured", { type: "checkbox" })}
+                {...productForm.getInputProps("isFeatured", {
+                  type: "checkbox",
+                })}
               />
               <Switch
                 label="Controlar inventario"
                 key={productForm.key("trackInventory")}
-                {...productForm.getInputProps("trackInventory", { type: "checkbox" })}
+                {...productForm.getInputProps("trackInventory", {
+                  type: "checkbox",
+                })}
               />
             </Group>
 
             <Group justify="flex-end" mt="md">
-              <Button variant="subtle" color="gray" onClick={productModal.close}>
+              <Button
+                variant="subtle"
+                color="gray"
+                onClick={productModal.close}
+              >
                 Cancelar
               </Button>
               <Button
                 type="submit"
                 color="brand.6"
-                loading={createItemMutation.isPending || updateItemMutation.isPending}
+                loading={
+                  createItemMutation.isPending || updateItemMutation.isPending
+                }
               >
                 {editingItemId ? "Guardar cambios" : "Crear producto"}
               </Button>
@@ -452,7 +491,8 @@ function ProductsPage() {
             Productos
           </Title>
           <Text c="dimmed" mt={4}>
-            Gestiona productos reales del catalogo activo con datos sincronizados.
+            Gestiona productos reales del catalogo activo con datos
+            sincronizados.
           </Text>
         </div>
 
@@ -532,14 +572,18 @@ function ProductsPage() {
         <Grid gutter="lg">
           {filteredItems.map((item) => {
             const categoryName =
-              categories.find((category) => category.id === item.categoryId)?.name ||
-              "Sin categoria";
+              categories.find((category) => category.id === item.categoryId)
+                ?.name || "Sin categoria";
 
             return (
               <Grid.Col key={item.id} span={{ base: 12, sm: 6, md: 4 }}>
                 <Card withBorder radius="lg" p="lg" h="100%">
                   <Stack gap="sm" h="100%">
-                    <Group justify="space-between" align="flex-start" wrap="nowrap">
+                    <Group
+                      justify="space-between"
+                      align="flex-start"
+                      wrap="nowrap"
+                    >
                       <div>
                         <Text fz="xs" tt="uppercase" fw={700} c="dimmed">
                           {categoryName}
@@ -551,7 +595,11 @@ function ProductsPage() {
 
                       <Menu position="bottom-end">
                         <Menu.Target>
-                          <ActionIcon variant="subtle" color="gray" aria-label="Opciones del producto">
+                          <ActionIcon
+                            variant="subtle"
+                            color="gray"
+                            aria-label="Opciones del producto"
+                          >
                             <MoreVertical size={16} />
                           </ActionIcon>
                         </Menu.Target>
@@ -584,7 +632,9 @@ function ProductsPage() {
                       <Badge color={item.status === "active" ? "blue" : "gray"}>
                         {item.status}
                       </Badge>
-                      {item.isFeatured ? <Badge color="orange">Destacado</Badge> : null}
+                      {item.isFeatured ? (
+                        <Badge color="orange">Destacado</Badge>
+                      ) : null}
                     </Group>
 
                     <Group justify="space-between" mt="auto">
