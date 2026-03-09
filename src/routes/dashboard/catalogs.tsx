@@ -1,17 +1,11 @@
 import {
   Alert,
-  Badge,
   Button,
   Card,
-  Divider,
   Group,
-  Modal,
   Select,
-  SimpleGrid,
   Stack,
-  Switch,
   Text,
-  TextInput,
   Title,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
@@ -23,9 +17,17 @@ import {
   useSuspenseQuery,
 } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Copy, FolderPlus, Layers3, Plus, Tags } from "lucide-react";
+import { Copy, FolderPlus, Plus } from "lucide-react";
 import { startTransition, useEffect, useState } from "react";
 
+import {
+  type CatalogFormValues,
+  CatalogList,
+  type CategoryFormValues,
+  CreateCatalogModal,
+  CreateCategoryModal,
+  EditCatalogModal,
+} from "#/components/dashboard/catalogs";
 import { authClient } from "#/lib/auth-client";
 import { getPublicCatalogUrl } from "#/lib/catalog-links";
 import { getErrorMessage } from "#/lib/get-error-message";
@@ -42,18 +44,6 @@ const locationListQueryOptions = () =>
   orpc.operations.listLocations.queryOptions({ input: listInput });
 const categoryListQueryOptions = (catalogId: string) =>
   orpc.catalog.listCategories.queryOptions({ input: { id: catalogId } });
-
-const catalogStatusOptions = [
-  { value: "draft", label: "Borrador" },
-  { value: "active", label: "Activo" },
-  { value: "archived", label: "Archivado" },
-] as const;
-
-const priceDisplayModeOptions = [
-  { value: "exact", label: "Precio exacto" },
-  { value: "starting_at", label: "Desde" },
-  { value: "hidden", label: "Ocultar precios" },
-] as const;
 
 export const Route = createFileRoute("/dashboard/catalogs")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -80,25 +70,6 @@ export const Route = createFileRoute("/dashboard/catalogs")({
   component: CatalogsPage,
 });
 
-type CatalogFormValues = {
-  name: string;
-  description: string;
-  currencyCode: string;
-  status: string;
-  priceDisplayMode: string;
-  siteId: string;
-  locationId: string;
-  brandThemeId: string;
-  isPublic: boolean;
-};
-
-type CategoryFormValues = {
-  name: string;
-  description: string;
-  parentCategoryId: string;
-  isVisible: boolean;
-};
-
 function CatalogsPage() {
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
@@ -123,7 +94,6 @@ function CatalogsPage() {
   const [shareFeedback, setShareFeedback] = useState<string | null>(null);
   const [editingCatalogId, setEditingCatalogId] = useState<string | null>(null);
   const [hasHydrated, setHasHydrated] = useState(false);
-  const modalSelectComboboxProps = { withinPortal: false } as const;
 
   useEffect(() => {
     setHasHydrated(true);
@@ -368,201 +338,41 @@ function CatalogsPage() {
 
   return (
     <Stack gap="xl">
-      <Modal
-        opened={catalogModalOpened}
-        onClose={catalogModal.close}
-        title={editingCatalogId ? "Editar catalogo" : "Nuevo catalogo"}
-        size="lg"
-        radius="lg"
-        centered
-        zIndex={1000}
-        overlayProps={{ backgroundOpacity: 0.4, blur: 2 }}
-      >
-        <form onSubmit={handleCatalogSubmit}>
-          <Stack gap="md">
-            {catalogError ? <Alert color="red">{catalogError}</Alert> : null}
+      {editingCatalogId ? (
+        <EditCatalogModal
+          opened={catalogModalOpened}
+          onClose={catalogModal.close}
+          form={catalogForm}
+          onSubmit={handleCatalogSubmit}
+          error={catalogError}
+          isSubmitting={updateCatalogMutation.isPending}
+          siteOptions={siteOptions}
+          locationOptions={locationOptions}
+          themeOptions={themeOptions}
+        />
+      ) : (
+        <CreateCatalogModal
+          opened={catalogModalOpened}
+          onClose={catalogModal.close}
+          form={catalogForm}
+          onSubmit={handleCatalogSubmit}
+          error={catalogError}
+          isSubmitting={catalogMutation.isPending}
+          siteOptions={siteOptions}
+          locationOptions={locationOptions}
+          themeOptions={themeOptions}
+        />
+      )}
 
-            <TextInput
-              label="Nombre"
-              placeholder="Ej: Menu principal"
-              key={catalogForm.key("name")}
-              {...catalogForm.getInputProps("name")}
-            />
-
-            <TextInput
-              label="Descripcion"
-              placeholder="Que vende este catalogo"
-              key={catalogForm.key("description")}
-              {...catalogForm.getInputProps("description")}
-            />
-
-            <Group grow align="flex-start">
-              <TextInput
-                label="Moneda"
-                placeholder="COP"
-                maxLength={3}
-                key={catalogForm.key("currencyCode")}
-                {...catalogForm.getInputProps("currencyCode")}
-              />
-
-              <Select
-                label="Estado"
-                data={catalogStatusOptions}
-                allowDeselect={false}
-                value={catalogForm.values.status}
-                onChange={(value) => {
-                  catalogForm.setFieldValue("status", value ?? "draft");
-                }}
-                error={catalogForm.errors.status}
-                comboboxProps={modalSelectComboboxProps}
-              />
-            </Group>
-
-            <Select
-              label="Modo de precio"
-              data={priceDisplayModeOptions}
-              allowDeselect={false}
-              value={catalogForm.values.priceDisplayMode}
-              onChange={(value) => {
-                catalogForm.setFieldValue("priceDisplayMode", value ?? "exact");
-              }}
-              error={catalogForm.errors.priceDisplayMode}
-              comboboxProps={modalSelectComboboxProps}
-            />
-
-            <Group grow>
-              <Select
-                clearable
-                label="Sitio asociado"
-                data={siteOptions}
-                value={catalogForm.values.siteId || null}
-                onChange={(value) => {
-                  catalogForm.setFieldValue("siteId", value ?? "");
-                }}
-                error={catalogForm.errors.siteId}
-                comboboxProps={modalSelectComboboxProps}
-                nothingFoundMessage="No hay sitios disponibles"
-              />
-              <Select
-                clearable
-                label="Sede"
-                data={locationOptions}
-                value={catalogForm.values.locationId || null}
-                onChange={(value) => {
-                  catalogForm.setFieldValue("locationId", value ?? "");
-                }}
-                error={catalogForm.errors.locationId}
-                comboboxProps={modalSelectComboboxProps}
-                nothingFoundMessage="No hay sedes disponibles"
-              />
-            </Group>
-
-            <Select
-              clearable
-              label="Tema de marca"
-              data={themeOptions}
-              value={catalogForm.values.brandThemeId || null}
-              onChange={(value) => {
-                catalogForm.setFieldValue("brandThemeId", value ?? "");
-              }}
-              error={catalogForm.errors.brandThemeId}
-              comboboxProps={modalSelectComboboxProps}
-              nothingFoundMessage="No hay temas disponibles"
-            />
-
-            <Switch
-              label="Visible al publico"
-              key={catalogForm.key("isPublic")}
-              {...catalogForm.getInputProps("isPublic", { type: "checkbox" })}
-            />
-
-            <Group justify="flex-end" mt="md">
-              <Button
-                variant="subtle"
-                color="gray"
-                onClick={catalogModal.close}
-              >
-                Cancelar
-              </Button>
-              <Button
-                type="submit"
-                color="brand.6"
-                loading={
-                  catalogMutation.isPending || updateCatalogMutation.isPending
-                }
-              >
-                {editingCatalogId ? "Guardar cambios" : "Crear catalogo"}
-              </Button>
-            </Group>
-          </Stack>
-        </form>
-      </Modal>
-
-      <Modal
+      <CreateCategoryModal
         opened={categoryModalOpened}
         onClose={categoryModal.close}
-        title="Nueva categoria"
-        radius="lg"
-        centered
-        zIndex={1000}
-        overlayProps={{ backgroundOpacity: 0.4, blur: 2 }}
-      >
-        <form onSubmit={handleCategorySubmit}>
-          <Stack gap="md">
-            {categoryError ? <Alert color="red">{categoryError}</Alert> : null}
-
-            <TextInput
-              label="Nombre"
-              placeholder="Ej: Bebidas frias"
-              key={categoryForm.key("name")}
-              {...categoryForm.getInputProps("name")}
-            />
-
-            <TextInput
-              label="Descripcion"
-              placeholder="Opcional"
-              key={categoryForm.key("description")}
-              {...categoryForm.getInputProps("description")}
-            />
-
-            <Select
-              clearable
-              label="Categoria padre"
-              data={categoryOptions}
-              value={categoryForm.values.parentCategoryId || null}
-              onChange={(value) => {
-                categoryForm.setFieldValue("parentCategoryId", value ?? "");
-              }}
-              error={categoryForm.errors.parentCategoryId}
-              comboboxProps={modalSelectComboboxProps}
-              nothingFoundMessage="No hay categorias disponibles"
-            />
-
-            <Switch
-              label="Visible en el catalogo"
-              key={categoryForm.key("isVisible")}
-              {...categoryForm.getInputProps("isVisible", { type: "checkbox" })}
-            />
-
-            <Group justify="flex-end" mt="md">
-              <Button
-                variant="subtle"
-                color="gray"
-                onClick={categoryModal.close}
-              >
-                Cancelar
-              </Button>
-              <Button
-                type="submit"
-                color="brand.6"
-                loading={createCategoryMutation.isPending}
-              >
-                Crear categoria
-              </Button>
-            </Group>
-          </Stack>
-        </form>
-      </Modal>
+        form={categoryForm}
+        onSubmit={handleCategorySubmit}
+        error={categoryError}
+        isSubmitting={createCategoryMutation.isPending}
+        categoryOptions={categoryOptions}
+      />
 
       <Group justify="space-between" align="flex-start">
         <div>
@@ -643,138 +453,14 @@ function CatalogsPage() {
         ) : null}
       </Card>
 
-      {selectedCatalog ? (
-        <SimpleGrid cols={{ base: 1, md: 3 }} spacing="lg">
-          <Card withBorder radius="lg" p="lg">
-            <Group justify="space-between" mb="sm">
-              <Text fw={700}>Estado</Text>
-              <Badge
-                color={selectedCatalog.status === "active" ? "teal" : "gray"}
-              >
-                {selectedCatalog.status}
-              </Badge>
-            </Group>
-            <Title order={3}>{selectedCatalog.name}</Title>
-            <Text c="dimmed" mt="xs">
-              {selectedCatalog.description || "Sin descripcion"}
-            </Text>
-            <Divider my="md" />
-            <Stack gap={8}>
-              <Text size="sm">Moneda: {selectedCatalog.currencyCode}</Text>
-              <Text size="sm">
-                Precios: {selectedCatalog.priceDisplayMode.replaceAll("_", " ")}
-              </Text>
-              <Text size="sm">
-                Publico: {selectedCatalog.isPublic ? "Si" : "No"}
-              </Text>
-            </Stack>
-          </Card>
-
-          <Card withBorder radius="lg" p="lg">
-            <Group justify="space-between" mb="sm">
-              <Text fw={700}>Categorias</Text>
-              <Badge variant="light">{categories.length}</Badge>
-            </Group>
-            <Text c="dimmed" size="sm">
-              Estructura visible para navegar el catalogo.
-            </Text>
-            <Divider my="md" />
-            <Stack gap="sm">
-              {categories.length > 0 ? (
-                categories.map((category) => (
-                  <Group key={category.id} justify="space-between">
-                    <div>
-                      <Text fw={600}>{category.name}</Text>
-                      <Text size="xs" c="dimmed">
-                        {category.description || "Sin descripcion"}
-                      </Text>
-                    </div>
-                    <Badge color={category.isVisible ? "teal" : "gray"}>
-                      {category.isVisible ? "Visible" : "Oculta"}
-                    </Badge>
-                  </Group>
-                ))
-              ) : (
-                <Alert color="gray">
-                  Aun no hay categorias para este catalogo.
-                </Alert>
-              )}
-            </Stack>
-          </Card>
-
-          <Card withBorder radius="lg" p="lg">
-            <Group justify="space-between" mb="sm">
-              <Text fw={700}>Conexiones</Text>
-              <Layers3 size={16} />
-            </Group>
-            <Text c="dimmed" size="sm">
-              Recursos relacionados usados para publicar este catalogo.
-            </Text>
-            <Divider my="md" />
-            <Stack gap="sm">
-              <Text size="sm">
-                Sitio:{" "}
-                {siteData.items.find(
-                  (item) => item.id === selectedCatalog.siteId,
-                )?.name || "Sin asociar"}
-              </Text>
-              <Text size="sm">
-                Sede:{" "}
-                {locationData.items.find(
-                  (item) => item.id === selectedCatalog.locationId,
-                )?.name || "Sin asociar"}
-              </Text>
-              <Text size="sm">
-                Tema:{" "}
-                {themeData.items.find(
-                  (item) => item.id === selectedCatalog.brandThemeId,
-                )?.name || "Sin asociar"}
-              </Text>
-            </Stack>
-          </Card>
-        </SimpleGrid>
-      ) : (
-        <Alert color="gray">
-          No hay catalogos creados todavia. Crea uno para empezar.
-        </Alert>
-      )}
-
-      <Card withBorder radius="lg" p="lg">
-        <Group justify="space-between" mb="md">
-          <Group gap="sm">
-            <Tags size={18} />
-            <Title order={4}>Resumen de categorias</Title>
-          </Group>
-          <Badge variant="light">{categories.length}</Badge>
-        </Group>
-
-        {categoriesQuery.isFetching ? (
-          <Text c="dimmed">Actualizando categorias...</Text>
-        ) : categories.length > 0 ? (
-          <SimpleGrid cols={{ base: 1, md: 2 }} spacing="md">
-            {categories.map((category) => (
-              <Card key={category.id} withBorder radius="md" p="md">
-                <Group justify="space-between" align="flex-start">
-                  <div>
-                    <Text fw={700}>{category.name}</Text>
-                    <Text c="dimmed" size="sm" mt={4}>
-                      {category.description || "Sin descripcion"}
-                    </Text>
-                  </div>
-                  <Badge color={category.isVisible ? "teal" : "gray"}>
-                    {category.isVisible ? "Visible" : "Oculta"}
-                  </Badge>
-                </Group>
-              </Card>
-            ))}
-          </SimpleGrid>
-        ) : (
-          <Alert color="gray">
-            Este catalogo aun no tiene categorias. Crea una para empezar a
-            ordenar el contenido.
-          </Alert>
-        )}
-      </Card>
+      <CatalogList
+        selectedCatalog={selectedCatalog}
+        categories={categories}
+        siteData={siteData}
+        locationData={locationData}
+        themeData={themeData}
+        categoriesFetching={categoriesQuery.isFetching}
+      />
     </Stack>
   );
 }
