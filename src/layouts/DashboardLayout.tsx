@@ -90,25 +90,33 @@ export function DashboardLayout({ children }: { children?: React.ReactNode }) {
   const [opened, { toggle, close }] = useDisclosure();
   const [plansModalOpened, { open: openPlans, close: closePlans }] =
     useDisclosure();
+  const [hasHydrated, setHasHydrated] = useState(false);
   const location = useLocation();
   const pathname = location.pathname;
   const navigate = useNavigate({ from: "/dashboard" });
   const { data: session, refetch: refetchSession } = authClient.useSession();
   const { data: organizations, refetch: refetchOrganizations } =
     authClient.useListOrganizations();
-  const {
-    data: activeOrganization,
-    refetch: refetchActiveOrganization,
-  } = authClient.useActiveOrganization();
+  const { data: activeOrganization, refetch: refetchActiveOrganization } =
+    authClient.useActiveOrganization();
   const [isSigningOut, setIsSigningOut] = useState(false);
-  const [switchingOrganizationId, setSwitchingOrganizationId] =
-    useState<string | null>(null);
+  const [switchingOrganizationId, setSwitchingOrganizationId] = useState<
+    string | null
+  >(null);
   const [organizationError, setOrganizationError] = useState<string | null>(
     null,
   );
 
-  const displayName = session?.user.name || "Tu cuenta";
-  const displayEmail = session?.user.email || "";
+  const displayName = hasHydrated
+    ? session?.user.name || "Tu cuenta"
+    : "Tu cuenta";
+  const displayEmail = hasHydrated ? session?.user.email || "" : "";
+  const activeOrganizationName = hasHydrated
+    ? activeOrganization?.name || "Selecciona organización"
+    : "Selecciona organización";
+  const activeOrganizationSlug = hasHydrated
+    ? activeOrganization?.slug || "Administra equipos y espacios"
+    : "Administra equipos y espacios";
   const initials =
     displayName
       .split(" ")
@@ -144,7 +152,9 @@ export function DashboardLayout({ children }: { children?: React.ReactNode }) {
     });
 
     if (error) {
-      setOrganizationError(error.message || "No se pudo cambiar la organización");
+      setOrganizationError(
+        error.message || "No se pudo cambiar la organización",
+      );
       setSwitchingOrganizationId(null);
       return;
     }
@@ -199,6 +209,10 @@ export function DashboardLayout({ children }: { children?: React.ReactNode }) {
     close();
   }, [close, pathname]);
 
+  useEffect(() => {
+    setHasHydrated(true);
+  }, []);
+
   return (
     <AppShell
       layout="alt"
@@ -246,13 +260,16 @@ export function DashboardLayout({ children }: { children?: React.ReactNode }) {
                     </ThemeIcon>
                     <Stack gap={0} style={{ minWidth: 0 }}>
                       <Text size="sm" fw={700} c="dark.8" truncate>
-                        {activeOrganization?.name || "Selecciona organización"}
+                        {activeOrganizationName}
                       </Text>
                       <Text size="xs" c="dimmed" truncate>
-                        {activeOrganization?.slug || "Administra equipos y espacios"}
+                        {activeOrganizationSlug}
                       </Text>
                     </Stack>
-                    <ChevronsUpDown size={16} color="var(--mantine-color-gray-6)" />
+                    <ChevronsUpDown
+                      size={16}
+                      color="var(--mantine-color-gray-6)"
+                    />
                   </Group>
                 </UnstyledButton>
               </Menu.Target>
@@ -262,14 +279,21 @@ export function DashboardLayout({ children }: { children?: React.ReactNode }) {
                 {organizations?.length ? (
                   organizations.map((organization) => {
                     const isActive = organization.id === activeOrganization?.id;
-                    const isLoading = switchingOrganizationId === organization.id;
+                    const isLoading =
+                      switchingOrganizationId === organization.id;
 
                     return (
                       <Menu.Item
                         key={organization.id}
-                        onClick={() => handleOrganizationChange(organization.id)}
+                        onClick={() =>
+                          handleOrganizationChange(organization.id)
+                        }
                         disabled={isLoading || isActive}
-                        leftSection={<Building2 style={{ width: rem(16), height: rem(16) }} />}
+                        leftSection={
+                          <Building2
+                            style={{ width: rem(16), height: rem(16) }}
+                          />
+                        }
                         rightSection={
                           isActive ? (
                             <Badge size="xs" color="brand" variant="light">
@@ -294,7 +318,9 @@ export function DashboardLayout({ children }: { children?: React.ReactNode }) {
                     );
                   })
                 ) : (
-                  <Menu.Item disabled>No tienes organizaciones todavía</Menu.Item>
+                  <Menu.Item disabled>
+                    No tienes organizaciones todavía
+                  </Menu.Item>
                 )}
                 <Menu.Divider />
                 <Menu.Item

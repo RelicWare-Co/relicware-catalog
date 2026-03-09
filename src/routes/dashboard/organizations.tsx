@@ -84,6 +84,7 @@ const toSlug = (value: string) =>
 const formatDate = (value: Date | string) =>
   new Intl.DateTimeFormat("es-CO", {
     dateStyle: "medium",
+    timeZone: "UTC",
   }).format(new Date(value));
 
 const createIdleSlugState = (): SlugAvailabilityState => ({

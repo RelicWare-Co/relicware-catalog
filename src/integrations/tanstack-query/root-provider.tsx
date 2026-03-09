@@ -1,18 +1,14 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 
-let context:
+let browserContext:
   | {
       queryClient: QueryClient;
     }
   | undefined;
 
-export function getContext() {
-  if (context) {
-    return context;
-  }
-
-  const queryClient = new QueryClient({
+function createQueryClient() {
+  return new QueryClient({
     defaultOptions: {
       queries: {
         staleTime: 30_000,
@@ -39,12 +35,24 @@ export function getContext() {
       },
     },
   });
+}
 
-  context = {
-    queryClient,
+export function getContext() {
+  if (typeof document === "undefined") {
+    return {
+      queryClient: createQueryClient(),
+    };
+  }
+
+  if (browserContext) {
+    return browserContext;
+  }
+
+  browserContext = {
+    queryClient: createQueryClient(),
   };
 
-  return context;
+  return browserContext;
 }
 
 export default function TanStackQueryProvider({

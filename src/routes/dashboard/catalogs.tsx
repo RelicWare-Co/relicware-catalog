@@ -24,7 +24,7 @@ import {
 } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { Copy, FolderPlus, Layers3, Plus, Tags } from "lucide-react";
-import { startTransition, useState } from "react";
+import { startTransition, useEffect, useState } from "react";
 
 import { authClient } from "#/lib/auth-client";
 import { getPublicCatalogUrl } from "#/lib/catalog-links";
@@ -32,8 +32,10 @@ import { getErrorMessage } from "#/lib/get-error-message";
 import { orpc } from "#/orpc/client";
 
 const listInput = { limit: 50, offset: 0 } as const;
-const catalogListQueryOptions = () => orpc.catalog.list.queryOptions({ input: listInput });
-const siteListQueryOptions = () => orpc.site.list.queryOptions({ input: listInput });
+const catalogListQueryOptions = () =>
+  orpc.catalog.list.queryOptions({ input: listInput });
+const siteListQueryOptions = () =>
+  orpc.site.list.queryOptions({ input: listInput });
 const themeListQueryOptions = () =>
   orpc.site.listThemes.queryOptions({ input: listInput });
 const locationListQueryOptions = () =>
@@ -55,7 +57,8 @@ const priceDisplayModeOptions = [
 
 export const Route = createFileRoute("/dashboard/catalogs")({
   validateSearch: (search: Record<string, unknown>) => ({
-    catalogId: typeof search.catalogId === "string" ? search.catalogId : undefined,
+    catalogId:
+      typeof search.catalogId === "string" ? search.catalogId : undefined,
   }),
   loaderDeps: ({ search }) => ({ catalogId: search.catalogId }),
   loader: async ({ context, deps }) => {
@@ -113,14 +116,20 @@ function CatalogsPage() {
     ...categoryListQueryOptions(selectedCatalogId ?? ""),
     enabled: Boolean(selectedCatalogId),
   });
-  const categories = categoriesQuery.data ?? [];
   const [catalogModalOpened, catalogModal] = useDisclosure(false);
   const [categoryModalOpened, categoryModal] = useDisclosure(false);
   const [catalogError, setCatalogError] = useState<string | null>(null);
   const [categoryError, setCategoryError] = useState<string | null>(null);
   const [shareFeedback, setShareFeedback] = useState<string | null>(null);
   const [editingCatalogId, setEditingCatalogId] = useState<string | null>(null);
+  const [hasHydrated, setHasHydrated] = useState(false);
   const modalSelectComboboxProps = { withinPortal: false } as const;
+
+  useEffect(() => {
+    setHasHydrated(true);
+  }, []);
+
+  const categories = categoriesQuery.data ?? [];
 
   const catalogForm = useForm<CatalogFormValues>({
     mode: "controlled",
@@ -139,7 +148,9 @@ function CatalogsPage() {
       name: (value) =>
         value.trim().length >= 2 ? null : "Ingresa un nombre valido",
       currencyCode: (value) =>
-        value.trim().length === 3 ? null : "Usa un codigo de moneda de 3 letras",
+        value.trim().length === 3
+          ? null
+          : "Usa un codigo de moneda de 3 letras",
     },
   });
 
@@ -286,7 +297,10 @@ function CatalogsPage() {
     };
 
     if (editingCatalogId) {
-      await updateCatalogMutation.mutateAsync({ id: editingCatalogId, ...payload });
+      await updateCatalogMutation.mutateAsync({
+        id: editingCatalogId,
+        ...payload,
+      });
       return;
     }
 
@@ -330,13 +344,15 @@ function CatalogsPage() {
   }));
 
   const publicCatalogUrl =
-    activeOrganization?.slug && selectedCatalog?.slug
+    hasHydrated && activeOrganization?.slug && selectedCatalog?.slug
       ? getPublicCatalogUrl(activeOrganization.slug, selectedCatalog.slug)
       : null;
 
   const handleCopyCatalogLink = async () => {
     if (!publicCatalogUrl) {
-      setShareFeedback("Este catálogo todavía no tiene un enlace público listo.");
+      setShareFeedback(
+        "Este catálogo todavía no tiene un enlace público listo.",
+      );
       return;
     }
 
@@ -344,7 +360,9 @@ function CatalogsPage() {
       await navigator.clipboard.writeText(publicCatalogUrl);
       setShareFeedback("Link copiado al portapapeles.");
     } catch {
-      setShareFeedback("No se pudo copiar automáticamente. Abre el catálogo y copia la URL manualmente.");
+      setShareFeedback(
+        "No se pudo copiar automáticamente. Abre el catálogo y copia la URL manualmente.",
+      );
     }
   };
 
@@ -459,13 +477,19 @@ function CatalogsPage() {
             />
 
             <Group justify="flex-end" mt="md">
-              <Button variant="subtle" color="gray" onClick={catalogModal.close}>
+              <Button
+                variant="subtle"
+                color="gray"
+                onClick={catalogModal.close}
+              >
                 Cancelar
               </Button>
               <Button
                 type="submit"
                 color="brand.6"
-                loading={catalogMutation.isPending || updateCatalogMutation.isPending}
+                loading={
+                  catalogMutation.isPending || updateCatalogMutation.isPending
+                }
               >
                 {editingCatalogId ? "Guardar cambios" : "Crear catalogo"}
               </Button>
@@ -521,7 +545,11 @@ function CatalogsPage() {
             />
 
             <Group justify="flex-end" mt="md">
-              <Button variant="subtle" color="gray" onClick={categoryModal.close}>
+              <Button
+                variant="subtle"
+                color="gray"
+                onClick={categoryModal.close}
+              >
                 Cancelar
               </Button>
               <Button
@@ -578,6 +606,7 @@ function CatalogsPage() {
       <Card withBorder radius="lg" p="lg">
         <Group align="end">
           <Select
+            id="catalog-active-select"
             label="Catalogo activo"
             placeholder="Selecciona un catalogo"
             data={catalogOptions}
@@ -619,7 +648,9 @@ function CatalogsPage() {
           <Card withBorder radius="lg" p="lg">
             <Group justify="space-between" mb="sm">
               <Text fw={700}>Estado</Text>
-              <Badge color={selectedCatalog.status === "active" ? "teal" : "gray"}>
+              <Badge
+                color={selectedCatalog.status === "active" ? "teal" : "gray"}
+              >
                 {selectedCatalog.status}
               </Badge>
             </Group>
@@ -664,7 +695,9 @@ function CatalogsPage() {
                   </Group>
                 ))
               ) : (
-                <Alert color="gray">Aun no hay categorias para este catalogo.</Alert>
+                <Alert color="gray">
+                  Aun no hay categorias para este catalogo.
+                </Alert>
               )}
             </Stack>
           </Card>
@@ -680,19 +713,30 @@ function CatalogsPage() {
             <Divider my="md" />
             <Stack gap="sm">
               <Text size="sm">
-                Sitio: {siteData.items.find((item) => item.id === selectedCatalog.siteId)?.name || "Sin asociar"}
+                Sitio:{" "}
+                {siteData.items.find(
+                  (item) => item.id === selectedCatalog.siteId,
+                )?.name || "Sin asociar"}
               </Text>
               <Text size="sm">
-                Sede: {locationData.items.find((item) => item.id === selectedCatalog.locationId)?.name || "Sin asociar"}
+                Sede:{" "}
+                {locationData.items.find(
+                  (item) => item.id === selectedCatalog.locationId,
+                )?.name || "Sin asociar"}
               </Text>
               <Text size="sm">
-                Tema: {themeData.items.find((item) => item.id === selectedCatalog.brandThemeId)?.name || "Sin asociar"}
+                Tema:{" "}
+                {themeData.items.find(
+                  (item) => item.id === selectedCatalog.brandThemeId,
+                )?.name || "Sin asociar"}
               </Text>
             </Stack>
           </Card>
         </SimpleGrid>
       ) : (
-        <Alert color="gray">No hay catalogos creados todavia. Crea uno para empezar.</Alert>
+        <Alert color="gray">
+          No hay catalogos creados todavia. Crea uno para empezar.
+        </Alert>
       )}
 
       <Card withBorder radius="lg" p="lg">
@@ -726,8 +770,8 @@ function CatalogsPage() {
           </SimpleGrid>
         ) : (
           <Alert color="gray">
-            Este catalogo aun no tiene categorias. Crea una para empezar a ordenar
-            el contenido.
+            Este catalogo aun no tiene categorias. Crea una para empezar a
+            ordenar el contenido.
           </Alert>
         )}
       </Card>
