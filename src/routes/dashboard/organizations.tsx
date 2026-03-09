@@ -633,7 +633,7 @@ function OrganizationsPage() {
     });
   };
 
-  if (sessionPending || organizationsPending || activeOrganizationPending) {
+  if ((sessionPending || organizationsPending || activeOrganizationPending) && !editModal) {
     return (
       <Group justify="center" py="xl">
         <Loader color="brand.6" />
