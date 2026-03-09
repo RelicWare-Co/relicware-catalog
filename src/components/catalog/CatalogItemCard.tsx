@@ -1,6 +1,6 @@
 import { Badge, Card, Group, Image, Stack, Text } from "@mantine/core";
-import { formatMoney } from "./utils";
 import type { BrandThemeConfig, CatalogColors, CatalogItem, PublicCatalog } from "./types";
+import { formatMoney } from "./utils";
 
 export function CatalogItemCard({
   item,

@@ -9,10 +9,10 @@ import { startTransition, useMemo, useState } from "react";
 import {
   CreateProductModal,
   EditProductModal,
-  itemStatusOptions,
-  ProductGrid,
   type FilterFormValues,
+  itemStatusOptions,
   type ProductFormValues,
+  ProductGrid,
   type ProductItem,
 } from "#/components/dashboard/products";
 import { getErrorMessage } from "#/lib/get-error-message";

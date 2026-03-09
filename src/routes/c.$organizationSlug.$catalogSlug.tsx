@@ -10,19 +10,18 @@ import { useDisclosure, useReducedMotion } from "@mantine/hooks";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-
-import { orpc } from "#/orpc/client";
 import {
   type BrandColorTuple,
-  type CatalogItem,
+  CatalogCTA,
   CatalogHero,
+  type CatalogItem,
   CatalogNotFound,
   CategorySection,
-  CatalogCTA,
-  ProductModal,
-  getRadiusAttr,
   getEnterMotionStyle,
+  getRadiusAttr,
+  ProductModal,
 } from "#/components/catalog";
+import { orpc } from "#/orpc/client";
 
 const publicCatalogQueryOptions = (
 
