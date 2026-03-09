@@ -3,7 +3,6 @@ import type { UseFormReturnType } from "@mantine/form";
 import { AlertCircle } from "lucide-react";
 import type { ChangeEvent } from "react";
 import type { OrganizationFormValues, SlugAvailabilityState } from "./types";
-import { createIdleSlugState } from "./utils";
 
 type CreateOrganizationModalProps = {
   opened: boolean;

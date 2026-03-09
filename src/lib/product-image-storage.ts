@@ -5,6 +5,7 @@ import sharp from "sharp";
 
 const R2_PUBLIC_BASE_URL =
   process.env.R2_PUBLIC_BASE_URL ?? "https://catalog-bucket.relicware.co";
+const R2_REGION = process.env.R2_REGION ?? "auto";
 
 const PRODUCT_IMAGE_MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 const PRODUCT_IMAGE_MAX_OUTPUT_BYTES = 2 * 1024 * 1024;
@@ -65,7 +66,7 @@ function getProductImageClient() {
         secretAccessKey: getRequiredEnv("R2_SECRET_KEY"),
         bucket: getRequiredEnv("R2_BUCKET_NAME"),
         endpoint: getRequiredEnv("R2_ENDPOINT_URL"),
-        region: "auto",
+        region: R2_REGION,
       });
   }
 
@@ -79,7 +80,7 @@ function getPublicBaseUrl() {
 }
 
 function toPublicUrl(key: string) {
-  return `${getPublicBaseUrl()}/${key}`;
+  return `${getPublicBaseUrl()}/relicware-catalog/${key}`;
 }
 
 function toStorageKey(url: string) {
@@ -188,6 +189,10 @@ export async function uploadProductImage(input: {
   const key = buildStorageKey(input.organizationId);
   const client = getProductImageClient();
 
+  console.log(
+    `Imagen procesada: original ${input.file.size} bytes, optimizada ${processed.bytes.byteLength} bytes, dimensiones ${processed.width}x${processed.height}`,
+  );
+
   try {
     await client.write(key, processed.bytes, {
       type: "image/webp",
@@ -197,11 +202,26 @@ export async function uploadProductImage(input: {
       error,
       key,
       organizationId: input.organizationId,
+      bucket: process.env.R2_BUCKET_NAME,
+      endpoint: process.env.R2_ENDPOINT_URL,
+      region: R2_REGION,
     });
 
+    const errorCode =
+      typeof error === "object" && error !== null && "code" in error
+        ? error.code
+        : undefined;
+
+    if (errorCode === "AccessDenied") {
+      throw new ProductImageStorageError(
+        "R2 rechazó la subida de la imagen. Verifica que el Access Key tenga permisos de escritura sobre el bucket configurado.",
+        500,
+      );
+    }
+
     throw new ProductImageStorageError(
-      "No se pudo almacenar la imagen del producto. Intenta de nuevo.",
-      502,
+      "No se pudo subir la imagen del producto a R2.",
+      500,
     );
   }
 

@@ -3,8 +3,8 @@ import {
   Container,
   createTheme,
   MantineProvider,
-  Text,
   Stack,
+  Text,
 } from "@mantine/core";
 import { useDisclosure, useReducedMotion } from "@mantine/hooks";
 import { useSuspenseQuery } from "@tanstack/react-query";
