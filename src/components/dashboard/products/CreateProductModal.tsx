@@ -1,17 +1,28 @@
 import {
   Alert,
   Button,
+  FileInput,
   Group,
+  Image,
   Modal,
   Select,
   Stack,
   Switch,
+  Text,
   TextInput,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
+import { useEffect, useState } from "react";
 
 import type { ProductFormValues } from "./types";
-import { itemStatusOptions, modalSelectComboboxProps } from "./utils";
+import {
+  itemStatusOptions,
+  modalSelectComboboxProps,
+  productImageAccept,
+  productImageAcceptedMimeTypes,
+  productImageMaxUploadBytes,
+  productImageMaxUploadLabel,
+} from "./utils";
 
 type CreateProductModalProps = {
   opened: boolean;
@@ -32,13 +43,15 @@ export function CreateProductModal({
   categoryOptions,
   isPending,
 }: CreateProductModalProps) {
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const productForm = useForm<ProductFormValues>({
     mode: "controlled",
     initialValues: {
       name: "",
       categoryId: "",
       shortDescription: "",
-      imageUrl: "",
+      imageFile: null,
+      removeImage: false,
       status: "draft",
       basePriceAmount: "",
       inventoryQuantity: "",
@@ -63,8 +76,32 @@ export function CreateProductModal({
           ? null
           : "Usa un entero mayor o igual a 0";
       },
+      imageFile: (value) => {
+        if (!value) return null;
+        if (!productImageAcceptedMimeTypes.includes(value.type as never)) {
+          return "Solo se permiten imágenes JPG, PNG o WebP";
+        }
+        if (value.size > productImageMaxUploadBytes) {
+          return `La imagen no puede superar ${productImageMaxUploadLabel}`;
+        }
+        return null;
+      },
     },
   });
+
+  useEffect(() => {
+    if (!productForm.values.imageFile) {
+      setPreviewUrl(null);
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(productForm.values.imageFile);
+    setPreviewUrl(objectUrl);
+
+    return () => {
+      URL.revokeObjectURL(objectUrl);
+    };
+  }, [productForm.values.imageFile]);
 
   const handleSubmit = productForm.onSubmit(async (values) => {
     try {
@@ -106,6 +143,33 @@ export function CreateProductModal({
             key={productForm.key("shortDescription")}
             {...productForm.getInputProps("shortDescription")}
           />
+
+          <Stack gap="xs">
+            <FileInput
+              label="Imagen del producto"
+              placeholder="Selecciona una imagen"
+              accept={productImageAccept}
+              clearable
+              value={productForm.values.imageFile}
+              onChange={(file) => {
+                productForm.setFieldValue("imageFile", file ?? null);
+                productForm.setFieldValue("removeImage", false);
+              }}
+              error={productForm.errors.imageFile}
+            />
+            <Text size="xs" c="dimmed">
+              Se optimiza con Sharp y se convierte a WebP. Límite: {productImageMaxUploadLabel}.
+            </Text>
+            {previewUrl ? (
+              <Image
+                src={previewUrl}
+                alt="Vista previa de la imagen seleccionada"
+                radius="md"
+                h={180}
+                fit="contain"
+              />
+            ) : null}
+          </Stack>
 
           <Group grow align="flex-start">
             <Select
@@ -152,13 +216,6 @@ export function CreateProductModal({
               {...productForm.getInputProps("inventoryQuantity")}
             />
           </Group>
-
-          <TextInput
-            label="URL de imagen"
-            placeholder="https://..."
-            key={productForm.key("imageUrl")}
-            {...productForm.getInputProps("imageUrl")}
-          />
 
           <Group grow>
             <Switch

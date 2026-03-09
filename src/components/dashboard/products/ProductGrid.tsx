@@ -1,4 +1,4 @@
-import { ActionIcon, Alert, Badge, Card, Grid, Group, Menu, Stack, Text } from "@mantine/core";
+import { ActionIcon, Alert, Badge, Card, Grid, Group, Image, Menu, Stack, Text } from "@mantine/core";
 import { Edit, MoreVertical, Trash } from "lucide-react";
 import type { ProductItem } from "./types";
 import { formatPrice, getStatusBadgeColor } from "./utils";
@@ -42,6 +42,16 @@ export function ProductGrid({
           <Grid.Col key={item.id} span={{ base: 12, sm: 6, md: 4 }}>
             <Card withBorder radius="lg" p="lg" h="100%">
               <Stack gap="sm" h="100%">
+                {item.imageUrl ? (
+                  <Image
+                    src={item.imageUrl}
+                    alt={item.name}
+                    radius="md"
+                    h={180}
+                    fit="cover"
+                  />
+                ) : null}
+
                 <Group justify="space-between" align="flex-start" wrap="nowrap">
                   <div>
                     <Text fz="xs" tt="uppercase" fw={700} c="dimmed">

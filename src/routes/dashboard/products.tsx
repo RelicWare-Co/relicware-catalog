@@ -6,15 +6,15 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Plus, Search } from "lucide-react";
 import { startTransition, useMemo, useState } from "react";
 
-import {
-  CreateProductModal,
-  EditProductModal,
-  type FilterFormValues,
-  itemStatusOptions,
-  type ProductFormValues,
-  ProductGrid,
-  type ProductItem,
-} from "#/components/dashboard/products";
+import { CreateProductModal } from "#/components/dashboard/products/CreateProductModal";
+import { EditProductModal } from "#/components/dashboard/products/EditProductModal";
+import { ProductGrid } from "#/components/dashboard/products/ProductGrid";
+import type {
+  FilterFormValues,
+  ProductFormValues,
+  ProductItem,
+} from "#/components/dashboard/products/types";
+import { itemStatusOptions } from "#/components/dashboard/products/utils";
 import { getErrorMessage } from "#/lib/get-error-message";
 import { orpc } from "#/orpc/client";
 
@@ -25,6 +25,42 @@ const categoryListQueryOptions = (catalogId: string) =>
   orpc.catalog.listCategories.queryOptions({ input: { id: catalogId } });
 const itemListQueryOptions = (catalogId: string) =>
   orpc.catalog.listItems.queryOptions({ input: { id: catalogId } });
+
+type UploadedProductImage = {
+  url: string;
+};
+
+async function uploadProductImage(file: File) {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch("/api/product-images", {
+    method: "POST",
+    body: formData,
+  });
+
+  const payload = (await response.json().catch(() => null)) as
+    | { url?: string; message?: string }
+    | null;
+
+  if (!response.ok || !payload?.url) {
+    throw new Error(
+      payload?.message ?? "No se pudo subir la imagen del producto",
+    );
+  }
+
+  return payload as UploadedProductImage;
+}
+
+async function deleteUploadedProductImage(url: string) {
+  await fetch("/api/product-images", {
+    method: "DELETE",
+    headers: {
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({ url }),
+  });
+}
 
 export const Route = createFileRoute("/dashboard/products")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -179,25 +215,46 @@ function ProductsPage() {
       throw new Error("No catalog");
     }
 
-    const payload = {
-      catalogId: selectedCatalogId,
-      categoryId: values.categoryId || null,
-      name: values.name.trim(),
-      shortDescription: values.shortDescription.trim() || null,
-      imageUrl: values.imageUrl.trim() || null,
-      status: values.status as "draft" | "active" | "archived",
-      basePriceAmount: values.basePriceAmount.trim()
-        ? Number(values.basePriceAmount)
-        : null,
-      inventoryQuantity: values.inventoryQuantity.trim()
-        ? Number(values.inventoryQuantity)
-        : null,
-      isAvailable: values.isAvailable,
-      isFeatured: values.isFeatured,
-      trackInventory: values.trackInventory,
-    };
+    let uploadedImageUrl: string | null = null;
 
-    await createItemMutation.mutateAsync(payload);
+    try {
+      if (values.imageFile) {
+        const uploadedImage = await uploadProductImage(values.imageFile);
+        uploadedImageUrl = uploadedImage.url;
+      }
+
+      const payload = {
+        catalogId: selectedCatalogId,
+        categoryId: values.categoryId || null,
+        name: values.name.trim(),
+        shortDescription: values.shortDescription.trim() || null,
+        imageUrl: uploadedImageUrl,
+        status: values.status as "draft" | "active" | "archived",
+        basePriceAmount: values.basePriceAmount.trim()
+          ? Number(values.basePriceAmount)
+          : null,
+        inventoryQuantity: values.inventoryQuantity.trim()
+          ? Number(values.inventoryQuantity)
+          : null,
+        isAvailable: values.isAvailable,
+        isFeatured: values.isFeatured,
+        trackInventory: values.trackInventory,
+      };
+
+      await createItemMutation.mutateAsync(payload);
+    } catch (error) {
+      if (uploadedImageUrl) {
+        void deleteUploadedProductImage(uploadedImageUrl);
+      }
+
+      if (!createItemMutation.isPending) {
+        setSubmitError(
+          getErrorMessage(error, "No se pudo crear el producto"),
+        );
+      }
+
+      throw error;
+    }
   };
 
   const handleUpdateProduct = async (values: ProductFormValues, itemId: string) => {
@@ -206,25 +263,50 @@ function ProductsPage() {
       throw new Error("No catalog");
     }
 
-    const payload = {
-      catalogId: selectedCatalogId,
-      categoryId: values.categoryId || null,
-      name: values.name.trim(),
-      shortDescription: values.shortDescription.trim() || null,
-      imageUrl: values.imageUrl.trim() || null,
-      status: values.status as "draft" | "active" | "archived",
-      basePriceAmount: values.basePriceAmount.trim()
-        ? Number(values.basePriceAmount)
-        : null,
-      inventoryQuantity: values.inventoryQuantity.trim()
-        ? Number(values.inventoryQuantity)
-        : null,
-      isAvailable: values.isAvailable,
-      isFeatured: values.isFeatured,
-      trackInventory: values.trackInventory,
-    };
+    const currentImageUrl = editingItem?.imageUrl ?? null;
+    let uploadedImageUrl: string | null = null;
 
-    await updateItemMutation.mutateAsync({ id: itemId, ...payload });
+    try {
+      let nextImageUrl = values.removeImage ? null : currentImageUrl;
+
+      if (values.imageFile) {
+        const uploadedImage = await uploadProductImage(values.imageFile);
+        uploadedImageUrl = uploadedImage.url;
+        nextImageUrl = uploadedImage.url;
+      }
+
+      const payload = {
+        catalogId: selectedCatalogId,
+        categoryId: values.categoryId || null,
+        name: values.name.trim(),
+        shortDescription: values.shortDescription.trim() || null,
+        imageUrl: nextImageUrl,
+        status: values.status as "draft" | "active" | "archived",
+        basePriceAmount: values.basePriceAmount.trim()
+          ? Number(values.basePriceAmount)
+          : null,
+        inventoryQuantity: values.inventoryQuantity.trim()
+          ? Number(values.inventoryQuantity)
+          : null,
+        isAvailable: values.isAvailable,
+        isFeatured: values.isFeatured,
+        trackInventory: values.trackInventory,
+      };
+
+      await updateItemMutation.mutateAsync({ id: itemId, ...payload });
+    } catch (error) {
+      if (uploadedImageUrl) {
+        void deleteUploadedProductImage(uploadedImageUrl);
+      }
+
+      if (!updateItemMutation.isPending) {
+        setSubmitError(
+          getErrorMessage(error, "No se pudo actualizar el producto"),
+        );
+      }
+
+      throw error;
+    }
   };
 
   const handleDeleteProduct = async (itemId: string) => {

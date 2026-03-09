@@ -8,7 +8,8 @@ export type ProductFormValues = {
   name: string;
   categoryId: string;
   shortDescription: string;
-  imageUrl: string;
+  imageFile: File | null;
+  removeImage: boolean;
   status: string;
   basePriceAmount: string;
   inventoryQuantity: string;

@@ -10,6 +10,7 @@ import {
   locations,
   sites,
 } from "#/db/schema/main.schema";
+import { removeProductImageByUrl } from "#/lib/product-image-storage";
 import { ensurePermission, notFound, withPermission } from "#/orpc/base";
 import {
   catalogStatusSchema,
@@ -830,6 +831,9 @@ export const updateItem = updateItemProcedure
       await ensureItemSlugAvailable(nextCatalogId, slug, current.id);
     }
 
+    const nextImageUrl =
+      input.imageUrl === undefined ? current.imageUrl : (input.imageUrl ?? null);
+
     const [updated] = await db
       .update(catalogItems)
       .set({
@@ -849,10 +853,7 @@ export const updateItem = updateItemProcedure
           input.description === undefined
             ? current.description
             : asNullableText(input.description),
-        imageUrl:
-          input.imageUrl === undefined
-            ? current.imageUrl
-            : (input.imageUrl ?? null),
+        imageUrl: nextImageUrl,
         gallery:
           input.gallery === undefined
             ? current.gallery
@@ -880,6 +881,10 @@ export const updateItem = updateItemProcedure
       })
       .where(eq(catalogItems.id, current.id))
       .returning();
+
+    if (current.imageUrl && current.imageUrl !== nextImageUrl) {
+      void removeProductImageByUrl(current.imageUrl);
+    }
 
     return updated;
   });
@@ -912,11 +917,15 @@ export const reorderItems = reorderItemProcedure
 export const removeItem = deleteItemProcedure
   .input(idInputSchema)
   .handler(async ({ input, context }) => {
-    await getItemOrThrow(input.id, context.activeOrganizationId);
+    const current = await getItemOrThrow(input.id, context.activeOrganizationId);
     const [deleted] = await db
       .delete(catalogItems)
       .where(eq(catalogItems.id, input.id))
       .returning();
+
+    if (current.imageUrl) {
+      void removeProductImageByUrl(current.imageUrl);
+    }
 
     return deleted;
   });

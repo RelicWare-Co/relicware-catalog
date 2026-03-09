@@ -4,6 +4,18 @@ export const itemStatusOptions = [
   { value: "archived", label: "Archivado" },
 ] as const;
 
+export const productImageAcceptedMimeTypes = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+] as const;
+
+export const productImageAccept = productImageAcceptedMimeTypes.join(",");
+
+export const productImageMaxUploadBytes = 10 * 1024 * 1024;
+
+export const productImageMaxUploadLabel = "10 MB";
+
 export const modalSelectComboboxProps = { withinPortal: false } as const;
 
 export const getStatusBadgeColor = (status: string) => {
