@@ -1,32 +1,20 @@
-import {
-  ActionIcon,
-  Alert,
-  Badge,
-  Button,
-  Card,
-  Grid,
-  Group,
-  Menu,
-  Modal,
-  Select,
-  Stack,
-  Switch,
-  Text,
-  TextInput,
-  Title,
-} from "@mantine/core";
+import { Alert, Badge, Button, Card, Group, Select, Stack, Text, TextInput, Title } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { useDisclosure } from "@mantine/hooks";
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-  useSuspenseQuery,
-} from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Edit, MoreVertical, Plus, Search, Trash } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import { startTransition, useMemo, useState } from "react";
 
+import {
+  CreateProductModal,
+  EditProductModal,
+  itemStatusOptions,
+  ProductGrid,
+  type FilterFormValues,
+  type ProductFormValues,
+  type ProductItem,
+} from "#/components/dashboard/products";
 import { getErrorMessage } from "#/lib/get-error-message";
 import { orpc } from "#/orpc/client";
 
@@ -37,12 +25,6 @@ const categoryListQueryOptions = (catalogId: string) =>
   orpc.catalog.listCategories.queryOptions({ input: { id: catalogId } });
 const itemListQueryOptions = (catalogId: string) =>
   orpc.catalog.listItems.queryOptions({ input: { id: catalogId } });
-
-const itemStatusOptions = [
-  { value: "draft", label: "Borrador" },
-  { value: "active", label: "Activo" },
-  { value: "archived", label: "Archivado" },
-] as const;
 
 export const Route = createFileRoute("/dashboard/products")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -74,25 +56,6 @@ export const Route = createFileRoute("/dashboard/products")({
   component: ProductsPage,
 });
 
-type FilterFormValues = {
-  term: string;
-  categoryId: string;
-  status: string;
-};
-
-type ProductFormValues = {
-  name: string;
-  categoryId: string;
-  shortDescription: string;
-  imageUrl: string;
-  status: string;
-  basePriceAmount: string;
-  inventoryQuantity: string;
-  isAvailable: boolean;
-  isFeatured: boolean;
-  trackInventory: boolean;
-};
-
 function ProductsPage() {
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
@@ -112,8 +75,9 @@ function ProductsPage() {
   });
   const categories = categoriesQuery.data ?? [];
   const items = itemsQuery.data ?? [];
-  const [productModalOpened, productModal] = useDisclosure(false);
-  const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [createModalOpened, { open: openCreate, close: closeCreate }] = useDisclosure(false);
+  const [editModalOpened, { open: openEdit, close: closeEdit }] = useDisclosure(false);
+  const [editingItem, setEditingItem] = useState<ProductItem | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const filterForm = useForm<FilterFormValues>({
@@ -122,46 +86,6 @@ function ProductsPage() {
       term: search.term ?? "",
       categoryId: search.categoryId ?? "",
       status: search.status ?? "",
-    },
-  });
-
-  const productForm = useForm<ProductFormValues>({
-    mode: "controlled",
-    initialValues: {
-      name: "",
-      categoryId: "",
-      shortDescription: "",
-      imageUrl: "",
-      status: "draft",
-      basePriceAmount: "",
-      inventoryQuantity: "",
-      isAvailable: true,
-      isFeatured: false,
-      trackInventory: false,
-    },
-    validate: {
-      name: (value) =>
-        value.trim().length >= 2 ? null : "Ingresa un nombre valido",
-      basePriceAmount: (value) => {
-        if (!value.trim()) {
-          return null;
-        }
-
-        const parsed = Number(value);
-        return Number.isInteger(parsed) && parsed >= 0
-          ? null
-          : "Usa un entero mayor o igual a 0";
-      },
-      inventoryQuantity: (value) => {
-        if (!value.trim()) {
-          return null;
-        }
-
-        const parsed = Number(value);
-        return Number.isInteger(parsed) && parsed >= 0
-          ? null
-          : "Usa un entero mayor o igual a 0";
-      },
     },
   });
 
@@ -177,8 +101,7 @@ function ProductsPage() {
         }
         await queryClient.invalidateQueries({ queryKey: orpc.catalog.key() });
         setSubmitError(null);
-        setEditingItemId(null);
-        productModal.close();
+        closeCreate();
       },
       onError: (error) => {
         setSubmitError(getErrorMessage(error, "No se pudo crear el producto"));
@@ -197,8 +120,8 @@ function ProductsPage() {
           });
         }
         setSubmitError(null);
-        setEditingItemId(null);
-        productModal.close();
+        setEditingItem(null);
+        closeEdit();
       },
       onError: (error) => {
         setSubmitError(
@@ -249,50 +172,11 @@ function ProductsPage() {
     value: catalog.id,
     label: catalog.name,
   }));
-  const modalSelectComboboxProps = { withinPortal: false } as const;
 
-  const openCreateProduct = () => {
-    setSubmitError(null);
-    setEditingItemId(null);
-    productForm.setValues({
-      name: "",
-      categoryId: "",
-      shortDescription: "",
-      imageUrl: "",
-      status: "draft",
-      basePriceAmount: "",
-      inventoryQuantity: "",
-      isAvailable: true,
-      isFeatured: false,
-      trackInventory: false,
-    });
-    productModal.open();
-  };
-
-  const openEditProduct = (item: (typeof items)[number]) => {
-    setSubmitError(null);
-    setEditingItemId(item.id);
-    productForm.setValues({
-      name: item.name,
-      categoryId: item.categoryId ?? "",
-      shortDescription: item.shortDescription ?? "",
-      imageUrl: item.imageUrl ?? "",
-      status: item.status,
-      basePriceAmount:
-        item.basePriceAmount === null ? "" : String(item.basePriceAmount),
-      inventoryQuantity:
-        item.inventoryQuantity === null ? "" : String(item.inventoryQuantity),
-      isAvailable: item.isAvailable,
-      isFeatured: item.isFeatured,
-      trackInventory: item.trackInventory,
-    });
-    productModal.open();
-  };
-
-  const handleProductSubmit = productForm.onSubmit(async (values) => {
+  const handleCreateProduct = async (values: ProductFormValues) => {
     if (!selectedCatalogId) {
       setSubmitError("Selecciona un catalogo antes de crear productos");
-      return;
+      throw new Error("No catalog");
     }
 
     const payload = {
@@ -313,13 +197,35 @@ function ProductsPage() {
       trackInventory: values.trackInventory,
     };
 
-    if (editingItemId) {
-      await updateItemMutation.mutateAsync({ id: editingItemId, ...payload });
-      return;
+    await createItemMutation.mutateAsync(payload);
+  };
+
+  const handleUpdateProduct = async (values: ProductFormValues, itemId: string) => {
+    if (!selectedCatalogId) {
+      setSubmitError("Selecciona un catalogo antes de crear productos");
+      throw new Error("No catalog");
     }
 
-    await createItemMutation.mutateAsync(payload);
-  });
+    const payload = {
+      catalogId: selectedCatalogId,
+      categoryId: values.categoryId || null,
+      name: values.name.trim(),
+      shortDescription: values.shortDescription.trim() || null,
+      imageUrl: values.imageUrl.trim() || null,
+      status: values.status as "draft" | "active" | "archived",
+      basePriceAmount: values.basePriceAmount.trim()
+        ? Number(values.basePriceAmount)
+        : null,
+      inventoryQuantity: values.inventoryQuantity.trim()
+        ? Number(values.inventoryQuantity)
+        : null,
+      isAvailable: values.isAvailable,
+      isFeatured: values.isFeatured,
+      trackInventory: values.trackInventory,
+    };
+
+    await updateItemMutation.mutateAsync({ id: itemId, ...payload });
+  };
 
   const handleDeleteProduct = async (itemId: string) => {
     if (
@@ -358,132 +264,26 @@ function ProductsPage() {
 
   return (
     <Stack gap="xl">
-      <Modal
-        opened={productModalOpened}
-        onClose={productModal.close}
-        title={editingItemId ? "Editar producto" : "Nuevo producto"}
-        size="lg"
-        radius="lg"
-        centered
-        zIndex={1000}
-        overlayProps={{ backgroundOpacity: 0.4, blur: 2 }}
-      >
-        <form onSubmit={handleProductSubmit}>
-          <Stack gap="md">
-            {submitError ? <Alert color="red">{submitError}</Alert> : null}
+      <CreateProductModal
+        opened={createModalOpened}
+        onClose={closeCreate}
+        onSubmit={handleCreateProduct}
+        submitError={submitError}
+        categoriesFetching={categoriesQuery.isFetching}
+        categoryOptions={categoryOptions}
+        isPending={createItemMutation.isPending}
+      />
 
-            <TextInput
-              label="Nombre"
-              placeholder="Ej: Latte frio"
-              key={productForm.key("name")}
-              {...productForm.getInputProps("name")}
-            />
-
-            <TextInput
-              label="Descripcion corta"
-              placeholder="Resumen visible en el menu"
-              key={productForm.key("shortDescription")}
-              {...productForm.getInputProps("shortDescription")}
-            />
-
-            <Group grow align="flex-start">
-              <Select
-                clearable
-                label="Categoria"
-                placeholder={
-                  categoriesQuery.isFetching
-                    ? "Cargando categorias..."
-                    : categoryOptions.length > 0
-                      ? "Selecciona una categoria"
-                      : "No hay categorias disponibles"
-                }
-                data={categoryOptions}
-                value={productForm.values.categoryId || null}
-                onChange={(value) => {
-                  productForm.setFieldValue("categoryId", value ?? "");
-                }}
-                error={productForm.errors.categoryId}
-                comboboxProps={modalSelectComboboxProps}
-                nothingFoundMessage="No hay categorias disponibles"
-              />
-
-              <Select
-                label="Estado"
-                data={itemStatusOptions}
-                allowDeselect={false}
-                key={productForm.key("status")}
-                comboboxProps={modalSelectComboboxProps}
-                {...productForm.getInputProps("status")}
-              />
-            </Group>
-
-            <Group grow align="flex-start">
-              <TextInput
-                label="Precio base"
-                placeholder="12000"
-                key={productForm.key("basePriceAmount")}
-                {...productForm.getInputProps("basePriceAmount")}
-              />
-              <TextInput
-                label="Inventario"
-                placeholder="25"
-                key={productForm.key("inventoryQuantity")}
-                {...productForm.getInputProps("inventoryQuantity")}
-              />
-            </Group>
-
-            <TextInput
-              label="URL de imagen"
-              placeholder="https://..."
-              key={productForm.key("imageUrl")}
-              {...productForm.getInputProps("imageUrl")}
-            />
-
-            <Group grow>
-              <Switch
-                label="Disponible"
-                key={productForm.key("isAvailable")}
-                {...productForm.getInputProps("isAvailable", {
-                  type: "checkbox",
-                })}
-              />
-              <Switch
-                label="Destacado"
-                key={productForm.key("isFeatured")}
-                {...productForm.getInputProps("isFeatured", {
-                  type: "checkbox",
-                })}
-              />
-              <Switch
-                label="Controlar inventario"
-                key={productForm.key("trackInventory")}
-                {...productForm.getInputProps("trackInventory", {
-                  type: "checkbox",
-                })}
-              />
-            </Group>
-
-            <Group justify="flex-end" mt="md">
-              <Button
-                variant="subtle"
-                color="gray"
-                onClick={productModal.close}
-              >
-                Cancelar
-              </Button>
-              <Button
-                type="submit"
-                color="brand.6"
-                loading={
-                  createItemMutation.isPending || updateItemMutation.isPending
-                }
-              >
-                {editingItemId ? "Guardar cambios" : "Crear producto"}
-              </Button>
-            </Group>
-          </Stack>
-        </form>
-      </Modal>
+      <EditProductModal
+        opened={editModalOpened}
+        onClose={closeEdit}
+        onSubmit={handleUpdateProduct}
+        submitError={submitError}
+        categoriesFetching={categoriesQuery.isFetching}
+        categoryOptions={categoryOptions}
+        isPending={updateItemMutation.isPending}
+        initialItem={editingItem}
+      />
 
       <Group justify="space-between" align="flex-start">
         <div>
@@ -496,7 +296,7 @@ function ProductsPage() {
           </Text>
         </div>
 
-        <Button color="brand.6" onClick={openCreateProduct}>
+        <Button color="brand.6" onClick={() => { setSubmitError(null); openCreate(); }}>
           <Group gap={8} wrap="nowrap">
             <Plus size={18} />
             <span>Nuevo producto</span>
@@ -566,99 +366,18 @@ function ProductsPage() {
         </form>
       </Card>
 
-      {itemsQuery.isFetching ? (
-        <Text c="dimmed">Actualizando productos...</Text>
-      ) : filteredItems.length > 0 ? (
-        <Grid gutter="lg">
-          {filteredItems.map((item) => {
-            const categoryName =
-              categories.find((category) => category.id === item.categoryId)
-                ?.name || "Sin categoria";
-
-            return (
-              <Grid.Col key={item.id} span={{ base: 12, sm: 6, md: 4 }}>
-                <Card withBorder radius="lg" p="lg" h="100%">
-                  <Stack gap="sm" h="100%">
-                    <Group
-                      justify="space-between"
-                      align="flex-start"
-                      wrap="nowrap"
-                    >
-                      <div>
-                        <Text fz="xs" tt="uppercase" fw={700} c="dimmed">
-                          {categoryName}
-                        </Text>
-                        <Text fw={700} fz="lg" c="dark.8" mt={4}>
-                          {item.name}
-                        </Text>
-                      </div>
-
-                      <Menu position="bottom-end">
-                        <Menu.Target>
-                          <ActionIcon
-                            variant="subtle"
-                            color="gray"
-                            aria-label="Opciones del producto"
-                          >
-                            <MoreVertical size={16} />
-                          </ActionIcon>
-                        </Menu.Target>
-                        <Menu.Dropdown>
-                          <Menu.Item
-                            leftSection={<Edit size={14} />}
-                            onClick={() => openEditProduct(item)}
-                          >
-                            Editar
-                          </Menu.Item>
-                          <Menu.Item
-                            color="red"
-                            leftSection={<Trash size={14} />}
-                            onClick={() => handleDeleteProduct(item.id)}
-                          >
-                            Eliminar
-                          </Menu.Item>
-                        </Menu.Dropdown>
-                      </Menu>
-                    </Group>
-
-                    <Text c="dimmed" size="sm">
-                      {item.shortDescription || "Sin descripcion corta"}
-                    </Text>
-
-                    <Group gap="xs">
-                      <Badge color={item.isAvailable ? "teal" : "gray"}>
-                        {item.isAvailable ? "Disponible" : "No disponible"}
-                      </Badge>
-                      <Badge color={item.status === "active" ? "blue" : "gray"}>
-                        {item.status}
-                      </Badge>
-                      {item.isFeatured ? (
-                        <Badge color="orange">Destacado</Badge>
-                      ) : null}
-                    </Group>
-
-                    <Group justify="space-between" mt="auto">
-                      <Text fw={800} c="brand.6">
-                        {item.basePriceAmount === null
-                          ? "Sin precio"
-                          : `$ ${item.basePriceAmount.toLocaleString("es-CO")}`}
-                      </Text>
-                      <Text size="sm" c="dimmed">
-                        Inventario: {item.inventoryQuantity ?? "-"}
-                      </Text>
-                    </Group>
-                  </Stack>
-                </Card>
-              </Grid.Col>
-            );
-          })}
-        </Grid>
-      ) : (
-        <Alert color="gray">
-          No hay productos que coincidan con los filtros actuales para este
-          catalogo.
-        </Alert>
-      )}
+      <ProductGrid
+        items={filteredItems}
+        categories={categories}
+        isFetching={itemsQuery.isFetching}
+        onEdit={(item) => {
+          setSubmitError(null);
+          setEditingItem(item);
+          openEdit();
+        }}
+        onDelete={handleDeleteProduct}
+      />
     </Stack>
   );
 }
+

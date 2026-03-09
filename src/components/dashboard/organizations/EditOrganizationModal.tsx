@@ -13,7 +13,7 @@ type EditOrganizationModalProps = {
   onNameChange: (event: ChangeEvent<HTMLInputElement>) => void;
   onSlugChange: (event: ChangeEvent<HTMLInputElement>) => void;
   hasManualSlug: boolean;
-  slugInputError?: string | null | false;
+  slugInputError?: string | null | false | React.ReactNode;
   candidateSlug: string;
   slugState: SlugAvailabilityState;
   onUseSuggestion: () => void;
