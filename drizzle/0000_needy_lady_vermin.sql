@@ -200,7 +200,7 @@ CREATE TABLE `catalogs` (
 	`name` text NOT NULL,
 	`slug` text NOT NULL,
 	`description` text,
-	`currency_code` text DEFAULT 'MXN' NOT NULL,
+	`currency_code` text DEFAULT 'COP' NOT NULL,
 	`status` text DEFAULT 'draft' NOT NULL,
 	`price_display_mode` text DEFAULT 'exact' NOT NULL,
 	`cover_image_url` text,

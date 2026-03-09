@@ -21,6 +21,7 @@
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
+    "@libsql/client": "^0.17.0",
     "@mantine/carousel": "^8.3.16",
     "@mantine/charts": "^8.3.16",
     "@mantine/code-highlight": "^8.3.16",
@@ -55,7 +56,6 @@
     "@tiptap/react": "^3.20.1",
     "@tiptap/starter-kit": "^3.20.1",
     "better-auth": "^1.5.4",
-    "better-sqlite3": "^12.6.2",
     "dayjs": "^1.11.19",
     "drizzle-kit": "^0.31.9",
     "drizzle-orm": "^0.45.1",
@@ -75,7 +75,6 @@
     "@tanstack/devtools-vite": "latest",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/react": "^16.3.2",
-    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^22.19.15",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
@@ -94,8 +93,7 @@
   "pnpm": {
     "onlyBuiltDependencies": [
       "esbuild",
-      "lightningcss",
-      "better-sqlite3"
+      "lightningcss"
     ]
   }
 }

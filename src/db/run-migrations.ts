@@ -1,5 +1,5 @@
 import { migrateDb } from "./index";
 
-migrateDb();
+await migrateDb();
 
 console.log("Drizzle migrations applied.");

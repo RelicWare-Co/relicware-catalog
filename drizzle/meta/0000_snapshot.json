@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "0aab4b36-7af5-4494-9185-7dd6b091a5da",
+  "id": "00d1d944-0934-41f5-a00a-9aa70e778e80",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "account": {
@@ -1425,7 +1425,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "'MXN'"
+          "default": "'COP'"
         },
         "status": {
           "name": "status",

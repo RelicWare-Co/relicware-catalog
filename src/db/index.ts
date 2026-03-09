@@ -1,15 +1,13 @@
 import "@tanstack/react-start/server-only";
 
 import { existsSync } from "node:fs";
-import { createRequire } from "node:module";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import type { BaseSQLiteDatabase } from "drizzle-orm/sqlite-core";
+import { migrate } from "drizzle-orm/libsql/migrator";
+import { drizzle } from "drizzle-orm/libsql/web";
 
 import * as authSchema from "./schema/auth.schema.ts";
 import * as mainSchema from "./schema/main.schema.ts";
-
-export const runtime = process.versions.bun ? "bun" : "node";
 
 const schema = {
   ...authSchema,
@@ -26,56 +24,45 @@ const migrationsFolder = existsSync(cwdMigrationsFolder)
 
 const globalForDb = globalThis as typeof globalThis & {
   __relicwareMigrationsApplied?: boolean;
+  __relicwareMigrationsPromise?: Promise<void>;
 };
-const require = createRequire(import.meta.url);
 
-type AppDb = BaseSQLiteDatabase<"sync", unknown, typeof schema>;
-
-async function createDbClient() {
+function createDbClient() {
   // biome-ignore lint/style/noNonNullAssertion: DATABASE_URL is required at runtime
   const databaseUrl = process.env.DATABASE_URL!;
 
-  if (runtime === "bun") {
-    const [{ drizzle }, { migrate }] = await Promise.all([
-      import("drizzle-orm/bun-sqlite"),
-      import("drizzle-orm/bun-sqlite/migrator"),
-    ]);
-    const db = drizzle(databaseUrl, { schema }) as AppDb;
-
-    return {
-      db,
-      migrate: () =>
-        migrate(db as Parameters<typeof migrate>[0], { migrationsFolder }),
-    };
-  }
-
-  const [{ drizzle }, { migrate }] = await Promise.all([
-    import("drizzle-orm/better-sqlite3"),
-    import("drizzle-orm/better-sqlite3/migrator"),
-  ]);
-  const sqlite = new (require("better-sqlite3") as typeof import(
-    "better-sqlite3"
-  ))(databaseUrl) as import("better-sqlite3").Database;
-  const db = drizzle(sqlite, { schema }) as AppDb;
+  const db = drizzle({
+    connection: {
+      url: databaseUrl,
+      authToken: process.env.DATABASE_AUTH_TOKEN,
+    },
+    schema,
+  });
 
   return {
     db,
-    migrate: () =>
-      migrate(db as Parameters<typeof migrate>[0], { migrationsFolder }),
+    migrate: () => migrate(db, { migrationsFolder }),
   };
 }
 
-const dbClient = await createDbClient();
+const dbClient = createDbClient();
 
 export const db = dbClient.db;
 
 export function migrateDb() {
   if (globalForDb.__relicwareMigrationsApplied) {
-    return;
+    return Promise.resolve();
   }
 
-  dbClient.migrate();
-  globalForDb.__relicwareMigrationsApplied = true;
+  if (globalForDb.__relicwareMigrationsPromise) {
+    return globalForDb.__relicwareMigrationsPromise;
+  }
+
+  globalForDb.__relicwareMigrationsPromise = dbClient.migrate().then(() => {
+    globalForDb.__relicwareMigrationsApplied = true;
+  });
+
+  return globalForDb.__relicwareMigrationsPromise;
 }
 
-migrateDb();
+await migrateDb();
