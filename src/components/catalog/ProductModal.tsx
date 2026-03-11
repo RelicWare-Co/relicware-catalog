@@ -10,6 +10,7 @@ export function ProductModal({
   catalog,
   colors,
   borderRadius,
+  whatsappEnabled = true,
 }: {
   opened: boolean;
   close: () => void;
@@ -17,6 +18,7 @@ export function ProductModal({
   catalog: PublicCatalog;
   colors: CatalogColors;
   borderRadius: string;
+  whatsappEnabled?: boolean;
 }) {
   if (!selectedItem) return null;
 
@@ -87,20 +89,22 @@ export function ProductModal({
             <div />
           )}
           
-          <Button
-            component="a"
-            href={`https://wa.me/?text=${encodeURIComponent(`Hola, me interesa el producto: ${selectedItem.name}`)}`}
-            target="_blank"
-            rel="noreferrer"
-            leftSection={<ShoppingBag size={18} />}
-            style={{
-              backgroundColor: colors.primary,
-              color: "#f8f8f6",
-              borderRadius,
-            }}
-          >
-            Pedir producto
-          </Button>
+          {whatsappEnabled && (
+            <Button
+              component="a"
+              href={`https://wa.me/?text=${encodeURIComponent(`Hola, me interesa el producto: ${selectedItem.name}`)}`}
+              target="_blank"
+              rel="noreferrer"
+              leftSection={<ShoppingBag size={18} />}
+              style={{
+                backgroundColor: colors.primary,
+                color: "#f8f8f6",
+                borderRadius,
+              }}
+            >
+              Pedir producto
+            </Button>
+          )}
         </Group>
       </Stack>
     </Modal>

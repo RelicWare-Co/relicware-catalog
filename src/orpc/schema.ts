@@ -92,6 +92,8 @@ export const createBrandThemeSchema = z.object({
   secondaryColor: colorSchema.nullable().optional(),
   accentColor: colorSchema.nullable().optional(),
   backgroundColor: colorSchema.default("#FFF8F1"),
+  gradientBackgroundColor: colorSchema.nullable().optional(),
+  gradientDirection: z.enum(["none", "vertical", "horizontal", "diagonal"]).default("none"),
   surfaceColor: colorSchema.nullable().optional(),
   textColor: colorSchema.default("#1B1B18"),
   mutedTextColor: colorSchema.nullable().optional(),

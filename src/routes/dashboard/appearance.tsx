@@ -10,6 +10,7 @@ import {
   Select,
   SimpleGrid,
   Stack,
+  Switch,
   Text,
   Title,
 } from "@mantine/core";
@@ -50,9 +51,13 @@ function AppearancePage() {
   const [theme, setTheme] = useState({
     primaryColor: "#09090b",
     backgroundColor: "#fafafa",
+    gradientBackgroundColor: "",
+    gradientDirection: "none",
     textColor: "#18181b",
+    fontHeading: "",
     cardStyle: "elevated",
     borderRadius: "lg",
+    whatsappEnabled: true,
   });
 
   const [isDataLoaded, setIsDataLoaded] = useState(false);
@@ -62,9 +67,14 @@ function AppearancePage() {
       setTheme({
         primaryColor: activeTheme.primaryColor || "#09090b",
         backgroundColor: activeTheme.backgroundColor || "#fafafa",
+        gradientBackgroundColor: activeTheme.gradientBackgroundColor || "",
+        gradientDirection: activeTheme.gradientDirection || "none",
         textColor: activeTheme.textColor || "#18181b",
+        fontHeading: activeTheme.fontHeading || "",
         cardStyle: activeTheme.cardStyle || "elevated",
         borderRadius: activeTheme.borderRadius || "lg",
+        // biome-ignore lint/suspicious/noExplicitAny: styleOverrides is JSON
+        whatsappEnabled: ((activeTheme.styleOverrides as any)?.whatsappEnabled) ?? true,
       });
       setIsDataLoaded(true);
     } else if (!activeTheme && themesResult && !isDataLoaded) {
@@ -117,9 +127,15 @@ function AppearancePage() {
     const payload = {
       primaryColor: theme.primaryColor,
       backgroundColor: theme.backgroundColor,
-      textColor: theme.textColor,
+      gradientBackgroundColor: theme.gradientBackgroundColor || null,
+      gradientDirection: theme.gradientDirection as "none" | "vertical" | "horizontal" | "diagonal",
+      fontHeading: theme.fontHeading || null,
       cardStyle: theme.cardStyle as "elevated" | "outlined" | "flat",
       borderRadius: theme.borderRadius as "none" | "sm" | "md" | "lg" | "xl" | "full",
+      styleOverrides: {
+        ...(activeTheme?.styleOverrides && typeof activeTheme.styleOverrides === 'object' ? activeTheme.styleOverrides : {}),
+        whatsappEnabled: theme.whatsappEnabled,
+      }
     };
 
     if (activeTheme) {
@@ -163,6 +179,33 @@ function AppearancePage() {
   const cardShadow =
     theme.cardStyle === "elevated" ? "0 8px 30px rgba(0,0,0,0.04)" : "none";
 
+  const getFontFamily = (font: string) => {
+    switch (font) {
+      case "serif":
+        return "Georgia, serif";
+      case "mono":
+        return "'Courier New', Courier, monospace";
+      case "rounded":
+        return "ui-rounded, 'SF Pro Rounded', system-ui";
+      default:
+        return "var(--mantine-font-family)";
+    }
+  };
+
+  const previewFont = getFontFamily(theme.fontHeading);
+  
+  const hasGradient = theme.gradientBackgroundColor && theme.gradientDirection !== "none";
+  let previewBackgroundImage = "none";
+  if (hasGradient) {
+    if (theme.gradientDirection === "vertical") {
+      previewBackgroundImage = `linear-gradient(to bottom, ${theme.backgroundColor}, ${theme.gradientBackgroundColor})`;
+    } else if (theme.gradientDirection === "horizontal") {
+      previewBackgroundImage = `linear-gradient(to right, ${theme.backgroundColor}, ${theme.gradientBackgroundColor})`;
+    } else if (theme.gradientDirection === "diagonal") {
+      previewBackgroundImage = `linear-gradient(135deg, ${theme.backgroundColor}, ${theme.gradientBackgroundColor})`;
+    }
+  }
+
   if (isLoading) {
     return (
       <Center h={300}>
@@ -203,35 +246,53 @@ function AppearancePage() {
           >
             <Stack gap="md">
               <Title order={4} c="dark.8">
-                Colores
+                Fondo y Acentos
               </Title>
               <Divider />
 
+              <ColorInput
+                label="Color Primario"
+                description="Acentos, botones y precios"
+                value={theme.primaryColor}
+                onChange={(val) =>
+                  setTheme((t) => ({ ...t, primaryColor: val }))
+                }
+              />
+
               <Group grow align="flex-start">
                 <ColorInput
-                  label="Color Primario"
-                  description="Acentos y botones"
-                  value={theme.primaryColor}
-                  onChange={(val) =>
-                    setTheme((t) => ({ ...t, primaryColor: val }))
-                  }
-                />
-                <ColorInput
                   label="Color de Fondo"
-                  description="Fondo de la página"
+                  description="Fondo principal"
                   value={theme.backgroundColor}
                   onChange={(val) =>
                     setTheme((t) => ({ ...t, backgroundColor: val }))
                   }
                 />
+                <ColorInput
+                  label="Color secundario"
+                  description="Añade un color para crear un gradiente (Opcional)"
+                  value={theme.gradientBackgroundColor}
+                  onChange={(val) =>
+                    setTheme((t) => ({ ...t, gradientBackgroundColor: val }))
+                  }
+                />
               </Group>
 
-              <ColorInput
-                label="Color de Texto"
-                description="Texto principal"
-                value={theme.textColor}
-                onChange={(val) => setTheme((t) => ({ ...t, textColor: val }))}
-              />
+              {theme.gradientBackgroundColor && (
+                <Select
+                  label="Dirección del Gradiente"
+                  value={theme.gradientDirection}
+                  onChange={(val) =>
+                    setTheme((t) => ({ ...t, gradientDirection: val || "none" }))
+                  }
+                  data={[
+                    { value: "none", label: "Ninguno" },
+                    { value: "vertical", label: "Vertical (Arriba a abajo)" },
+                    { value: "horizontal", label: "Horizontal (Izquierda a derecha)" },
+                    { value: "diagonal", label: "Diagonal (Esquina superior izquierda a inferior derecha)" },
+                  ]}
+                />
+              )}
             </Stack>
           </Card>
 
@@ -244,9 +305,24 @@ function AppearancePage() {
           >
             <Stack gap="md">
               <Title order={4} c="dark.8">
-                Estilo de Componentes
+                Tipografía y Estilo
               </Title>
               <Divider />
+
+              <Select
+                label="Fuente Principal"
+                description="Tipografía para todos tus textos"
+                value={theme.fontHeading}
+                onChange={(val) =>
+                  setTheme((t) => ({ ...t, fontHeading: val || "" }))
+                }
+                data={[
+                  { value: "", label: "Por defecto (Inter)" },
+                  { value: "serif", label: "Elegante (Serif)" },
+                  { value: "mono", label: "Clásica (Monospace)" },
+                  { value: "rounded", label: "Amigable (Rounded)" },
+                ]}
+              />
 
               <Select
                 label="Bordes"
@@ -278,6 +354,16 @@ function AppearancePage() {
                   { value: "elevated", label: "Elevado (Sombra)" },
                 ]}
               />
+
+              <Switch
+                label="Mostrar botón WhatsApp"
+                description="Mostrar botón para contactar por WhatsApp en el catálogo"
+                checked={theme.whatsappEnabled}
+                onChange={(event) => {
+                  const checked = event.currentTarget.checked;
+                  setTheme((t) => ({ ...t, whatsappEnabled: checked }));
+                }}
+              />
             </Stack>
           </Card>
         </Stack>
@@ -297,8 +383,10 @@ function AppearancePage() {
               overflow: "hidden",
               position: "relative",
               backgroundColor: theme.backgroundColor,
+              backgroundImage: previewBackgroundImage,
               boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
-              transition: "background-color 200ms ease",
+              transition: "background 200ms ease",
+              fontFamily: previewFont,
             }}
           >
             {/* Pantalla simulada del catalogo */}

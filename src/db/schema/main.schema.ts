@@ -77,6 +77,12 @@ export const brandThemes = sqliteTable(
     secondaryColor: text("secondary_color"),
     accentColor: text("accent_color"),
     backgroundColor: text("background_color").notNull().default("#FFF8F1"),
+    gradientBackgroundColor: text("gradient_background_color"),
+    gradientDirection: text("gradient_direction", {
+      enum: ["none", "vertical", "horizontal", "diagonal"],
+    })
+      .notNull()
+      .default("none"),
     surfaceColor: text("surface_color"),
     textColor: text("text_color").notNull().default("#1B1B18"),
     mutedTextColor: text("muted_text_color"),

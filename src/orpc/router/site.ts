@@ -267,6 +267,8 @@ export const createTheme = createBrandProcedure
           secondaryColor: input.secondaryColor ?? null,
           accentColor: input.accentColor ?? null,
           backgroundColor: input.backgroundColor,
+          gradientBackgroundColor: input.gradientBackgroundColor ?? null,
+          gradientDirection: input.gradientDirection,
           surfaceColor: input.surfaceColor ?? null,
           textColor: input.textColor,
           mutedTextColor: input.mutedTextColor ?? null,
@@ -317,6 +319,11 @@ export const updateTheme = updateBrandProcedure
             ? current.accentColor
             : (input.accentColor ?? null),
         backgroundColor: input.backgroundColor ?? current.backgroundColor,
+        gradientBackgroundColor:
+          input.gradientBackgroundColor === undefined
+            ? current.gradientBackgroundColor
+            : (input.gradientBackgroundColor ?? null),
+        gradientDirection: input.gradientDirection ?? current.gradientDirection,
         surfaceColor:
           input.surfaceColor === undefined
             ? current.surfaceColor
